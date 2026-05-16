@@ -8,9 +8,44 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  password     String
+  profileImage String?
+  collegeName  String?
+  isVerified   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  products     Product[]
+
+  @@index([email])
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  price       Decimal  @db.Decimal(10, 2)
+  condition   String
+  images      String[]
+  isSold      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([isSold])
+  @@index([createdAt])
 }
