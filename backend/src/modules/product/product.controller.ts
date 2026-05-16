@@ -2,15 +2,15 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import * as productService from "./product.service";
 import {
-  CreateProductInput,
+  CreateProductBody,
   GetProductsQuery,
 } from "./product.validation";
 
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
-  const product = await productService.createProduct(
-    req.user!.userId,
-    req.body as CreateProductInput
-  );
+  const product = await productService.createProduct(req.user!.userId, {
+    ...(req.body as CreateProductBody),
+    images: req.uploadedImageUrls ?? [],
+  });
   res.status(201).json({ success: true, data: product });
 });
 
