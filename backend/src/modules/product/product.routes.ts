@@ -10,6 +10,7 @@ import {
   createProductSchema,
   getProductsQuerySchema,
   productIdParamSchema,
+  updateProductStatusSchema,
 } from "./product.validation";
 
 const router = Router();
@@ -24,6 +25,12 @@ router.post(
 );
 
 router.get(
+  "/me",
+  authenticate,
+  productController.getMyProducts
+);
+
+router.get(
   "/",
   validate(getProductsQuerySchema, "query"),
   productController.getAllProducts
@@ -33,6 +40,14 @@ router.get(
   "/:id",
   validate(productIdParamSchema, "params"),
   productController.getProductById
+);
+
+router.patch(
+  "/:id/status",
+  authenticate,
+  validate(productIdParamSchema, "params"),
+  validate(updateProductStatusSchema),
+  productController.updateProductStatus
 );
 
 router.delete(

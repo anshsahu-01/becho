@@ -27,6 +27,8 @@ export interface PublicUser {
 
 export type Seller = PublicUser;
 
+export type ProductStatus = "ACTIVE" | "SOLD" | "HIDDEN";
+
 export interface Product {
   id: string;
   title: string;
@@ -35,11 +37,17 @@ export interface Product {
   condition: string;
   images: string[];
   isSold: boolean;
+  status: ProductStatus;
   createdAt: string;
   categoryId: string;
   userId: string;
   seller: Seller;
   category: Pick<Category, "id" | "name">;
+}
+
+export interface MyProductsResponse {
+  active: Product[];
+  sold: Product[];
 }
 
 export interface ConversationListItem {

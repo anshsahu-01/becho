@@ -1,10 +1,12 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, ProductStatus } from "@prisma/client";
 import { GetProductsQuery } from "./product.validation";
 
 export function buildProductWhere(
   query: GetProductsQuery
 ): Prisma.ProductWhereInput {
-  const where: Prisma.ProductWhereInput = {};
+  const where: Prisma.ProductWhereInput = {
+    status: ProductStatus.ACTIVE,
+  };
 
   if (query.search) {
     where.title = {

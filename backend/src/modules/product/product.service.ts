@@ -1,9 +1,13 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, ProductStatus } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../utils/AppError";
 import { getPaginationMeta, PaginationMeta } from "../../utils/pagination";
 import { buildProductOrderBy, buildProductWhere } from "./product.query";
-import { CreateProductInput, GetProductsQuery } from "./product.validation";
+import {
+  CreateProductInput,
+  GetProductsQuery,
+  UpdateProductStatusBody,
+} from "./product.validation";
 
 const sellerSelect = {
   id: true,
@@ -29,9 +33,11 @@ type ProductWithRelations = Prisma.ProductGetPayload<{
 
 function formatProduct(product: ProductWithRelations) {
   const { user, ...rest } = product;
+  const isSold = rest.status === ProductStatus.SOLD;
   return {
     ...rest,
     price: Number(rest.price),
+    isSold,
     seller: user,
   };
 }
@@ -59,6 +65,8 @@ export async function createProduct(userId: string, input: CreateProductInput) {
       images: input.images,
       categoryId: input.categoryId,
       userId,
+      status: ProductStatus.ACTIVE,
+      isSold: false,
     },
     include: productInclude,
   });
@@ -100,6 +108,56 @@ export async function getProductById(id: string) {
   }
 
   return formatProduct(product);
+}
+
+export async function getMyProducts(userId: string) {
+  const products = await prisma.product.findMany({
+    where: {
+      userId,
+      status: { in: [ProductStatus.ACTIVE, ProductStatus.SOLD] },
+    },
+    orderBy: { createdAt: "desc" },
+    include: productInclude,
+  });
+
+  const formatted = products.map(formatProduct);
+
+  return {
+    active: formatted.filter((p) => p.status === ProductStatus.ACTIVE),
+    sold: formatted.filter((p) => p.status === ProductStatus.SOLD),
+  };
+}
+
+export async function updateProductStatus(
+  id: string,
+  userId: string,
+  input: UpdateProductStatusBody
+) {
+  const product = await prisma.product.findUnique({
+    where: { id },
+    select: { id: true, userId: true },
+  });
+
+  if (!product) {
+    throw new AppError("Product not found", 404);
+  }
+
+  if (product.userId !== userId) {
+    throw new AppError("You are not allowed to update this product", 403);
+  }
+
+  const isSold = input.status === ProductStatus.SOLD;
+
+  const updated = await prisma.product.update({
+    where: { id },
+    data: {
+      status: input.status,
+      isSold,
+    },
+    include: productInclude,
+  });
+
+  return formatProduct(updated);
 }
 
 export async function deleteProduct(id: string, userId: string) {

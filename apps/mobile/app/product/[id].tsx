@@ -49,6 +49,8 @@ export default function ProductDetailScreen() {
   }, [loadProduct]);
 
   const isOwner = user?.id === product?.userId;
+  const isSold =
+    product?.status === "SOLD" || product?.isSold === true;
 
   const handleChat = async () => {
     if (!product || !token || isOwner) return;
@@ -95,7 +97,7 @@ export default function ProductDetailScreen() {
               />
             ))}
           </ScrollView>
-          {product.isSold ? (
+          {isSold ? (
             <View className="absolute left-3 top-3 rounded bg-ink px-2 py-1">
               <Text className="text-[12px] font-bold text-white">SOLD</Text>
             </View>
@@ -130,7 +132,7 @@ export default function ProductDetailScreen() {
         <SellerRow seller={product.seller} />
       </ScrollView>
 
-      {!isOwner && token && !product.isSold ? (
+      {!isOwner && token && !isSold ? (
         <View className="border-t border-line bg-white p-3">
           <Button
             title="Message seller"

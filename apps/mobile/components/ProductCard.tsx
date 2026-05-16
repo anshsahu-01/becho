@@ -11,7 +11,7 @@ type ProductCardProps = {
 
 export function ProductCard({ product }: ProductCardProps) {
   const imageUri = product.images?.[0];
-  const isSold = product.isSold;
+  const isSold = product.status === "SOLD" || product.isSold;
 
   return (
     <Pressable

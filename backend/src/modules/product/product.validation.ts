@@ -41,3 +41,13 @@ export type CreateProductInput = CreateProductBody & {
   images: string[];
 };
 export type GetProductsQuery = z.infer<typeof getProductsQuerySchema>;
+
+export const productStatusValues = ["ACTIVE", "SOLD", "HIDDEN"] as const;
+
+export const updateProductStatusSchema = z.object({
+  status: z.enum(productStatusValues, {
+    message: "Status must be ACTIVE, SOLD, or HIDDEN",
+  }),
+});
+
+export type UpdateProductStatusBody = z.infer<typeof updateProductStatusSchema>;

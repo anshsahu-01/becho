@@ -1,8 +1,10 @@
 import {
   ApiResponse,
   CreateProductInput,
+  MyProductsResponse,
   Product,
   ProductFilters,
+  ProductStatus,
 } from "@/types";
 import { apiRequest } from "./api";
 
@@ -55,3 +57,29 @@ export async function createProduct(input: CreateProductInput, token: string) {
   return res.data;
 }
 
+export async function getMyProducts(token: string) {
+  const res = await apiRequest<ApiResponse<MyProductsResponse>>("/products/me", {
+    token,
+  });
+  return res.data;
+}
+
+export async function updateProductStatus(
+  id: string,
+  status: ProductStatus,
+  token: string
+) {
+  const res = await apiRequest<ApiResponse<Product>>(`/products/${id}/status`, {
+    method: "PATCH",
+    body: { status },
+    token,
+  });
+  return res.data;
+}
+
+export async function deleteProduct(id: string, token: string) {
+  await apiRequest(`/products/${id}`, {
+    method: "DELETE",
+    token,
+  });
+}
