@@ -126,7 +126,7 @@ export default function HomeScreen() {
                   <Ionicons name="menu-outline" size={20} color="#111111" />
                 </Pressable>
                 <View className="flex-1 items-center px-3">
-                  <BrandMark subtitle={user?.collegeName ?? "Campus marketplace"} />
+                  <BrandMark subtitle={user?.collegeName ?? "Campus marketplace"} size={250}/>
                 </View>
                 <CartButton />
               </View>

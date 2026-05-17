@@ -75,7 +75,24 @@ export default function CartScreen() {
               <Text className="text-[18px] font-semibold text-ink">{formatPrice(total)}</Text>
             </View>
             <Pressable
-              onPress={() => router.push("/checkout")}
+              onPress={() => {
+                if (items.length === 0) return;
+                const first = items[0];
+                router.push({
+                  pathname: "/checkout",
+                  params: {
+                    productId: first.productId,
+                    title: first.title,
+                    price: String(first.price),
+                    image: first.image,
+                    sellerId: first.sellerId,
+                    items: String(items.length),
+                    subtotal: String(subtotal),
+                    shipping: "0",
+                    total: String(total),
+                  },
+                });
+              }}
               className="h-12 items-center justify-center rounded-2xl bg-ink"
             >
               <Text className="text-[15px] font-medium text-white">Checkout</Text>

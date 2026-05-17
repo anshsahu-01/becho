@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import * as chatService from "@/services/chat.service";
 import * as productService from "@/services/product.service";
 import { ApiError } from "@/services/api";
+import { useCartStore } from "@/store/cartStore";
 import { Product } from "@/types";
 import { formatDate, formatPrice } from "@/utils/format";
 
@@ -31,6 +32,8 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [cartLoading, setCartLoading] = useState(false);
+  const addToCart = useCartStore((state) => state.addItem);
 
   const loadProduct = useCallback(async () => {
     if (!id) return;
@@ -54,17 +57,7 @@ export default function ProductDetailScreen() {
   const isOwner = currentUserId != null && sellerId != null && currentUserId === sellerId;
   const isSold = product?.status === "SOLD" || product?.isSold === true;
 
-  useEffect(() => {
-    if (!product) return;
 
-    console.log("[BuyNow Debug]", {
-      currentUserId,
-      sellerId,
-      productStatus: product.status,
-      isOwner,
-      isSold,
-    });
-  }, [currentUserId, isOwner, isSold, product, sellerId]);
 
   const showActionBar = useMemo(
     () => Boolean(product && token && !isOwner && !isSold),
@@ -84,6 +77,23 @@ export default function ProductDetailScreen() {
       );
     } finally {
       setChatLoading(false);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!product || !showActionBar) return;
+    try {
+      setCartLoading(true);
+      const { added } = await addToCart(product);
+      if (added) {
+        Alert.alert("Added to cart", `${product.title} has been added to your cart.`);
+      } else {
+        Alert.alert("Already in cart", "This item is already in your cart.");
+      }
+    } catch {
+      Alert.alert("Error", "Could not add item to cart.");
+    } finally {
+      setCartLoading(false);
     }
   };
 
@@ -121,7 +131,7 @@ export default function ProductDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      <ScreenHeader title="Item" showBack rightAction={<CartButton count={1} />} />
+      <ScreenHeader title="Item" showBack rightAction={<CartButton />} />
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: showActionBar ? 96 : 16 }}>
         <View className="relative">
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
@@ -173,21 +183,28 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       {showActionBar ? (
-        <View className="border-t border-line bg-white p-3">
-          <View className="flex-row gap-3">
+        <View className="border-t border-line bg-white px-3 pb-3 pt-2">
+          <View className="flex-row gap-2">
             <Button
               title="Message seller"
               onPress={handleChat}
               loading={chatLoading}
               variant="outline"
-              className="h-12 flex-1 rounded-2xl"
+              className="h-11 flex-1 rounded-2xl"
             />
             <Button
-              title="Buy Now"
-              onPress={handleBuyNow}
-              className="h-12 flex-1 rounded-2xl"
+              title="Add to Cart"
+              onPress={handleAddToCart}
+              loading={cartLoading}
+              variant="outline"
+              className="h-11 flex-1 rounded-2xl"
             />
           </View>
+          <Button
+            title="Buy Now"
+            onPress={handleBuyNow}
+            className="mt-2 h-[50px] rounded-2xl"
+          />
         </View>
       ) : null}
     </SafeAreaView>

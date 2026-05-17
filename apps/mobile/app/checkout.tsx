@@ -29,13 +29,7 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    console.log("[Checkout Debug]", {
-      receivedParams: params,
-      renderedProductId: product?.id ?? null,
-      selectedItemSource: params.productId ? "route-productId" : "missing",
-    });
-  }, [params, product?.id]);
+
 
   useEffect(() => {
     async function loadCheckoutProduct() {
