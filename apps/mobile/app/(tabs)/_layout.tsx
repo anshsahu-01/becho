@@ -12,7 +12,7 @@ function TabIcon({ name, focused }: TabIconProps) {
     <Ionicons
       name={name}
       size={22}
-      color={focused ? "#1A1A1A" : "#999999"}
+      color={focused ? "#1A1A1A" : "#A6A09A"}
     />
   );
 }
@@ -28,19 +28,16 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarStyle: {
-          borderTopColor: "#E5E5E5",
+          borderTopColor: "#ECE7DE",
           backgroundColor: "#FFFFFF",
-          height: 56,
-          paddingBottom: 6,
-          paddingTop: 4,
+          height: 68,
+          paddingBottom: 10,
+          paddingTop: 10,
         },
         tabBarActiveTintColor: "#1A1A1A",
-        tabBarInactiveTintColor: "#999999",
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "500",
-        },
+        tabBarInactiveTintColor: "#A6A09A",
       }}
     >
       <Tabs.Screen
@@ -86,6 +83,12 @@ export default function TabsLayout() {
               focused={focused}
             />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="cart"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

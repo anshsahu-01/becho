@@ -10,6 +10,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
+import { CartButton } from "@/components/CartButton";
 import { LoadingState } from "@/components/LoadingState";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { SellerRow } from "@/components/SellerRow";
@@ -49,8 +50,7 @@ export default function ProductDetailScreen() {
   }, [loadProduct]);
 
   const isOwner = user?.id === product?.userId;
-  const isSold =
-    product?.status === "SOLD" || product?.isSold === true;
+  const isSold = product?.status === "SOLD" || product?.isSold === true;
 
   const handleChat = async () => {
     if (!product || !token || isOwner) return;
@@ -83,7 +83,7 @@ export default function ProductDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      <ScreenHeader title="" showBack />
+      <ScreenHeader title="Item" showBack rightAction={<CartButton count={1} />} />
       <ScrollView className="flex-1">
         <View className="relative">
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
@@ -92,29 +92,29 @@ export default function ProductDetailScreen() {
                 key={uri}
                 source={{ uri }}
                 style={{ width, height: 280 }}
-                className="bg-canvas"
+                className="bg-white"
                 contentFit="cover"
               />
             ))}
           </ScrollView>
           {isSold ? (
-            <View className="absolute left-3 top-3 rounded bg-ink px-2 py-1">
-              <Text className="text-[12px] font-bold text-white">SOLD</Text>
+            <View className="absolute left-4 top-4 rounded-full bg-danger px-3 py-1">
+              <Text className="text-[10px] font-medium text-white">SOLD</Text>
             </View>
           ) : null}
         </View>
 
-        <View className="p-4">
-          <Text className="mb-2 text-2xl font-bold text-ink">{formatPrice(product.price)}</Text>
+        <View className="m-4 rounded-2xl border border-line bg-white p-4">
+          <Text className="mb-2 text-[24px] font-semibold text-ink">{formatPrice(product.price)}</Text>
           <Text className="mb-3 text-[20px] font-semibold leading-[26px] text-ink">
             {product.title}
           </Text>
 
           <View className="mb-2 flex-row flex-wrap gap-2">
-            <Text className="rounded bg-canvas px-3 py-1 text-[13px] text-muted">
+            <Text className="rounded-full border border-line px-3 py-1 text-[13px] text-muted">
               {product.category.name}
             </Text>
-            <Text className="rounded bg-canvas px-3 py-1 text-[13px] text-muted">
+            <Text className="rounded-full border border-line px-3 py-1 text-[13px] text-muted">
               {product.condition}
             </Text>
           </View>
@@ -125,11 +125,13 @@ export default function ProductDetailScreen() {
 
           <View className="my-4 h-px bg-line" />
 
-          <Text className="mb-2 text-[15px] font-semibold text-ink">Description</Text>
+          <Text className="mb-2 text-[15px] font-medium text-ink">Description</Text>
           <Text className="text-[15px] leading-[22px] text-ink">{product.description}</Text>
         </View>
 
-        <SellerRow seller={product.seller} />
+        <View className="mx-4 mb-4 overflow-hidden rounded-2xl border border-line bg-white">
+          <SellerRow seller={product.seller} />
+        </View>
       </ScrollView>
 
       {!isOwner && token && !isSold ? (
@@ -138,6 +140,7 @@ export default function ProductDetailScreen() {
             title="Message seller"
             onPress={handleChat}
             loading={chatLoading}
+            className="rounded-2xl"
           />
         </View>
       ) : null}

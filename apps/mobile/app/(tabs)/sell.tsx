@@ -11,8 +11,10 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
+import { CartButton } from "@/components/CartButton";
 import { Chip } from "@/components/Chip";
 import { Input } from "@/components/Input";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/hooks/useAuth";
 import * as categoryService from "@/services/category.service";
 import * as productService from "@/services/product.service";
@@ -91,74 +93,74 @@ export default function SellScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      <View className="border-b border-line px-4 py-3">
-        <Text className="text-[20px] font-bold text-ink">Sell an item</Text>
-      </View>
+      <ScreenHeader title="Sell an item" rightAction={<CartButton count={Math.min(images.length, 3)} />} />
 
       <ScrollView
         contentContainerClassName="p-4 pb-10"
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="mb-2 mt-2 text-[13px] font-semibold text-muted">
-          Photos ({images.length}/5)
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-          <Pressable
-            className="mr-2 h-20 w-20 items-center justify-center rounded border border-dashed border-line"
-            onPress={pickImages}
-          >
-            <Text className="text-[13px] text-muted">+ Add</Text>
-          </Pressable>
-          {images.map((uri, index) => (
-            <Pressable key={uri} onPress={() => removeImage(index)}>
-              <Image source={{ uri }} className="mr-2 h-20 w-20 rounded" />
+        <View className="rounded-2xl border border-line bg-white p-4">
+          <Text className="mb-2 mt-2 text-[13px] font-medium text-muted">
+            Photos ({images.length}/5)
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+            <Pressable
+              className="mr-2 h-20 w-20 items-center justify-center rounded-xl border border-dashed border-line bg-white"
+              onPress={pickImages}
+            >
+              <Text className="text-[13px] text-muted">+ Add</Text>
             </Pressable>
-          ))}
-        </ScrollView>
+            {images.map((uri, index) => (
+              <Pressable key={uri} onPress={() => removeImage(index)}>
+                <Image source={{ uri }} className="mr-2 h-20 w-20 rounded-xl" />
+              </Pressable>
+            ))}
+          </ScrollView>
 
-        <Input label="Title" value={title} onChangeText={setTitle} placeholder="What are you selling?" />
-        <Input
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Describe condition, usage, etc."
-          multiline
-          inputClassName="h-[88px] pt-3"
-        />
-        <Input
-          label="Price (₹)"
-          value={price}
-          onChangeText={setPrice}
-          keyboardType="numeric"
-          placeholder="0"
-        />
+          <Input label="Title" value={title} onChangeText={setTitle} placeholder="What are you selling?" />
+          <Input
+            label="Description"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Describe condition, usage, etc."
+            multiline
+            inputClassName="h-[88px] pt-3"
+          />
+          <Input
+            label="Price (Rs)"
+            value={price}
+            onChangeText={setPrice}
+            keyboardType="numeric"
+            placeholder="0"
+          />
 
-        <Text className="mb-2 mt-2 text-[13px] font-semibold text-muted">Category</Text>
-        <View className="mb-4 flex-row flex-wrap gap-2">
-          {categories.map((cat) => (
-            <Chip
-              key={cat.id}
-              label={cat.name}
-              active={categoryId === cat.id}
-              onPress={() => setCategoryId(cat.id)}
-            />
-          ))}
+          <Text className="mb-2 mt-2 text-[13px] font-medium text-muted">Category</Text>
+          <View className="mb-4 flex-row flex-wrap gap-2">
+            {categories.map((cat) => (
+              <Chip
+                key={cat.id}
+                label={cat.name}
+                active={categoryId === cat.id}
+                onPress={() => setCategoryId(cat.id)}
+              />
+            ))}
+          </View>
+
+          <Text className="mb-2 text-[13px] font-medium text-muted">Condition</Text>
+          <View className="mb-4 flex-row flex-wrap gap-2">
+            {CONDITIONS.map((item) => (
+              <Chip
+                key={item}
+                label={item}
+                active={condition === item}
+                onPress={() => setCondition(item)}
+              />
+            ))}
+          </View>
+
+          {error ? <Text className="mb-3 text-[13px] text-danger">{error}</Text> : null}
+          <Button title="Post listing" onPress={handleSubmit} loading={loading} className="rounded-2xl" />
         </View>
-
-        <Text className="mb-2 text-[13px] font-semibold text-muted">Condition</Text>
-        <View className="mb-4 flex-row flex-wrap gap-2">
-          {CONDITIONS.map((item) => (
-            <Chip
-              key={item}
-              label={item}
-              active={condition === item}
-              onPress={() => setCondition(item)}
-            />
-          ))}
-        </View>
-
-        {error ? <Text className="mb-3 text-[13px] text-danger">{error}</Text> : null}
-        <Button title="Post listing" onPress={handleSubmit} loading={loading} />
       </ScrollView>
     </SafeAreaView>
   );

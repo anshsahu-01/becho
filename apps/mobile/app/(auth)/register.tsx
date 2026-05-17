@@ -2,14 +2,16 @@ import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Text,
+  View,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { ApiError } from "@/services/api";
 
@@ -47,6 +49,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
+      <ScreenHeader title="Create account" showBack />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -55,38 +58,40 @@ export default function RegisterScreen() {
           contentContainerClassName="p-5 pt-3"
           keyboardShouldPersistTaps="handled"
         >
-          <Pressable onPress={() => router.back()} className="mb-4">
-            <Text className="text-[15px] text-ink">← Back</Text>
-          </Pressable>
+          <View className="mb-5">
+            <BrandMark subtitle="Join your campus marketplace" size={350}/>
+          </View>
 
-          <Text className="mb-1 text-[20px] font-bold text-ink">Create account</Text>
-          <Text className="mb-5 text-[15px] text-muted">Join your campus marketplace</Text>
+          <View className="rounded-2xl border border-line bg-white p-5">
+            <Text className="mb-1 text-[20px] font-semibold text-ink">Set up your profile</Text>
+            <Text className="mb-5 text-[15px] text-muted">Create an account to get started</Text>
 
-          <Input label="Full name" value={name} onChangeText={setName} placeholder="Your name" />
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="you@college.edu"
-          />
-          <Input
-            label="College"
-            value={collegeName}
-            onChangeText={setCollegeName}
-            placeholder="College name (optional)"
-          />
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Min 6 characters"
-          />
+            <Input label="Full name" value={name} onChangeText={setName} placeholder="Your name" />
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="you@college.edu"
+            />
+            <Input
+              label="College"
+              value={collegeName}
+              onChangeText={setCollegeName}
+              placeholder="College name (optional)"
+            />
+            <Input
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="Min 6 characters"
+            />
 
-          {error ? <Text className="mb-3 text-[13px] text-danger">{error}</Text> : null}
-          <Button title="Sign up" onPress={handleRegister} loading={loading} />
+            {error ? <Text className="mb-3 text-[13px] text-danger">{error}</Text> : null}
+            <Button title="Sign up" onPress={handleRegister} loading={loading} className="rounded-2xl" />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

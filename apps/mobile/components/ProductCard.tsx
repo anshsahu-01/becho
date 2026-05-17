@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types";
 import { formatPrice } from "@/utils/format";
 import { cn } from "@/utils/cn";
@@ -15,42 +16,49 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Pressable
+      style={{ width: "100%" }}
       className={cn(
-        "flex-row gap-3 border-b border-line bg-white p-3",
+        "overflow-hidden rounded-2xl border border-line bg-white",
         isSold && "opacity-60"
       )}
       onPress={() => router.push(`/product/${product.id}`)}
     >
-      <View className="relative">
+      <View style={{ width: "100%", height: 154 }} className="relative bg-white">
         {imageUri ? (
           <Image
             source={{ uri: imageUri }}
-            className="h-[100px] w-[100px] rounded bg-canvas"
+            style={{ width: "100%", height: "100%" }}
             contentFit="cover"
             transition={150}
           />
         ) : (
-          <View className="h-[100px] w-[100px] items-center justify-center rounded bg-canvas">
+          <View className="h-full w-full items-center justify-center bg-white">
             <Text className="text-[13px] text-faint">No photo</Text>
           </View>
         )}
+
+        <View className="absolute right-3 top-3 h-8 w-8 items-center justify-center rounded-full border border-line bg-white">
+          <Ionicons name="heart-outline" size={15} color="#111111" />
+        </View>
+
         {isSold ? (
-          <View className="absolute left-1 top-1 rounded bg-ink px-1.5 py-0.5">
-            <Text className="text-[10px] font-bold text-white">SOLD</Text>
+          <View className="absolute left-3 top-3 rounded-full bg-danger px-2.5 py-1">
+            <Text className="text-[10px] font-semibold text-white">SOLD</Text>
           </View>
         ) : null}
       </View>
-      <View className="flex-1 justify-center">
-        <Text className="text-lg font-bold text-ink">{formatPrice(product.price)}</Text>
-        <Text className="mt-0.5 text-[15px] leading-5 text-ink" numberOfLines={2}>
+
+      <View className="p-3">
+        <Text className="text-[15px] font-semibold leading-5 text-ink" numberOfLines={2}>
           {product.title}
         </Text>
-        <Text className="mt-0.5 text-[13px] text-muted" numberOfLines={1}>
-          {product.category?.name ?? "—"} · {product.condition}
+        <Text className="mt-2 text-[15px] font-semibold text-ink">{formatPrice(product.price)}</Text>
+        <Text className="mt-1 text-[13px] text-muted" numberOfLines={1}>
+          {product.category?.name ?? "Uncategorized"}
         </Text>
-        {product.seller?.collegeName ? (
-          <Text className="mt-0.5 text-[13px] text-faint" numberOfLines={1}>
-            {product.seller.collegeName}
+        {product.seller?.name ? (
+          <Text className="mt-1 text-[12px] text-faint" numberOfLines={1}>
+            {product.seller.name}
           </Text>
         ) : null}
       </View>

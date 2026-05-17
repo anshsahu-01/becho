@@ -31,6 +31,10 @@ export default function RootLayout() {
           name="chat/[id]"
           options={{ headerShown: false, presentation: "card" }}
         />
+        <Stack.Screen
+          name="checkout"
+          options={{ headerShown: false, presentation: "card" }}
+        />
       </Stack>
     </>
   );

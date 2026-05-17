@@ -8,15 +8,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: "#1A1A1A",
+        ink: "#111111",
         muted: "#666666",
-        faint: "#999999",
-        line: "#E5E5E5",
-        canvas: "#F7F7F7",
-        danger: "#D93025",
-        link: "#2563EB",
-        verified: "#2E7D32",
-        verifiedBg: "#E8F5E9",
+        faint: "#666666",
+        line: "#EEEEEE",
+        canvas: "#FFFFFF",
+        danger: "#FF4C3B",
+        link: "#111111",
+        verified: "#111111",
+        verifiedBg: "#FFFFFF",
       },
     },
   },

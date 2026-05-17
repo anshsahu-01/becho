@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Becho",
+    "name": "Just Sell",
     "slug": "becho",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -31,7 +31,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Becho to access your photos to list items."
+          "photosPermission": "Allow Just Sell to access your photos to list items."
         }
       ]
     ]

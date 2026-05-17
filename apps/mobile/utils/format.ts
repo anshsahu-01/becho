@@ -1,5 +1,5 @@
 export function formatPrice(price: number): string {
-  return `₹${price.toLocaleString("en-IN")}`;
+  return `Rs ${price.toLocaleString("en-IN")}`;
 }
 
 export function formatDate(date: string): string {

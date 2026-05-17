@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -8,9 +8,13 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MyListingCard } from "@/components/MyListingCard";
+import { CartButton } from "@/components/CartButton";
 import { LoadingState } from "@/components/LoadingState";
+import { MyListingCard } from "@/components/MyListingCard";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/hooks/useAuth";
 import * as productService from "@/services/product.service";
 import { ApiError } from "@/services/api";
@@ -22,6 +26,16 @@ export default function ProfileScreen() {
   const [sold, setSold] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const initials = useMemo(() => {
+    const name = user?.name?.trim() ?? "";
+    if (!name) return "JS";
+    return name
+      .split(" ")
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("");
+  }, [user?.name]);
 
   const loadListings = useCallback(
     async (isRefresh = false) => {
@@ -81,69 +95,117 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+      <ScreenHeader title="Profile" rightAction={<CartButton count={Math.min(active.length, 3)} />} />
+
       <ScrollView
         className="flex-1"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => loadListings(true)} />
         }
+        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
       >
-        <View className="border-b border-line px-4 py-3">
-          <Text className="text-[20px] font-bold text-ink">Profile</Text>
-        </View>
-
-        <View className="border-b border-line p-4">
-          <Text className="text-[17px] font-semibold text-ink">{user?.name}</Text>
+        <View className="items-center rounded-2xl border border-line bg-white px-5 py-6">
+          {user?.profileImage ? (
+            <Image
+              source={{ uri: user.profileImage }}
+              className="mb-4 h-20 w-20 rounded-full border border-line bg-white"
+              contentFit="cover"
+            />
+          ) : (
+            <View className="mb-4 h-20 w-20 items-center justify-center rounded-full border border-line bg-white">
+              <Text className="text-[24px] font-semibold text-ink">{initials}</Text>
+            </View>
+          )}
+          <Text className="text-[22px] font-semibold text-ink">{user?.name}</Text>
           <Text className="mt-1 text-[14px] text-muted">{user?.email}</Text>
           {user?.collegeName ? (
-            <Text className="mt-1 text-[13px] text-faint">{user.collegeName}</Text>
+            <Text className="mt-1 text-[13px] text-muted">{user.collegeName}</Text>
           ) : null}
+          <View className="mt-4 rounded-full border border-line px-4 py-2">
+            <Text className="text-[13px] text-muted">
+              {user?.isVerified ? "Verified account" : "Standard account"}
+            </Text>
+          </View>
         </View>
 
-        <View className="border-b border-line px-4 py-3">
-          <Text className="text-[16px] font-semibold text-ink">My listings</Text>
+        <View className="mt-4 flex-row gap-3">
+          <View className="flex-1 rounded-2xl border border-line bg-white p-4">
+            <Text className="text-[13px] text-muted">Active</Text>
+            <Text className="mt-2 text-[24px] font-semibold text-ink">{active.length}</Text>
+          </View>
+          <View className="flex-1 rounded-2xl border border-line bg-white p-4">
+            <Text className="text-[13px] text-muted">Sold</Text>
+            <Text className="mt-2 text-[24px] font-semibold text-ink">{sold.length}</Text>
+          </View>
         </View>
 
-        <Text className="bg-canvas px-4 py-2 text-[13px] font-semibold text-muted">
-          Active ({active.length})
-        </Text>
-        {active.length === 0 ? (
-          <Text className="px-4 py-4 text-[14px] text-muted">No active listings</Text>
-        ) : (
-          active.map((product) => (
-            <MyListingCard
-              key={product.id}
-              product={product}
-              showMarkSold
-              onMarkSold={() => handleMarkSold(product.id)}
-              onDelete={() => handleDelete(product.id)}
-            />
-          ))
-        )}
-
-        <Text className="bg-canvas px-4 py-2 text-[13px] font-semibold text-muted">
-          Sold ({sold.length})
-        </Text>
-        {sold.length === 0 ? (
-          <Text className="px-4 py-4 text-[14px] text-muted">No sold listings</Text>
-        ) : (
-          sold.map((product) => (
-            <MyListingCard
-              key={product.id}
-              product={product}
-              showMarkSold={false}
-              onDelete={() => handleDelete(product.id)}
-            />
-          ))
-        )}
-
-        <View className="p-4">
-          <Pressable
-            onPress={logout}
-            className="h-11 items-center justify-center rounded-md border border-line"
-          >
-            <Text className="text-[15px] font-semibold text-ink">Log out</Text>
-          </Pressable>
+        <View className="mt-4 rounded-2xl border border-line bg-white">
+          {[
+            { icon: "bag-handle-outline", title: "My listings", value: `${active.length} active` },
+            { icon: "archive-outline", title: "Sold archive", value: `${sold.length} sold` },
+            { icon: "school-outline", title: "Campus", value: user?.collegeName ?? "Not added" },
+          ].map((item, index) => (
+            <View key={item.title}>
+              <View className="flex-row items-center gap-3 px-4 py-4">
+                <Ionicons name={item.icon as never} size={18} color="#111111" />
+                <View className="flex-1">
+                  <Text className="text-[15px] font-medium text-ink">{item.title}</Text>
+                  <Text className="mt-1 text-[13px] text-muted">{item.value}</Text>
+                </View>
+              </View>
+              {index < 2 ? <View className="mx-4 h-px bg-line" /> : null}
+            </View>
+          ))}
         </View>
+
+        <View className="mt-4">
+          <Text className="mb-3 text-[18px] font-semibold text-ink">My listings</Text>
+          <View className="overflow-hidden rounded-2xl border border-line bg-white">
+            <Text className="border-b border-line px-4 py-3 text-[13px] font-medium text-muted">
+              Active ({active.length})
+            </Text>
+            {active.length === 0 ? (
+              <Text className="px-4 py-5 text-[14px] text-muted">No active listings</Text>
+            ) : (
+              active.map((product) => (
+                <MyListingCard
+                  key={product.id}
+                  product={product}
+                  showMarkSold
+                  onMarkSold={() => handleMarkSold(product.id)}
+                  onDelete={() => handleDelete(product.id)}
+                />
+              ))
+            )}
+          </View>
+        </View>
+
+        <View className="mt-4">
+          <View className="overflow-hidden rounded-2xl border border-line bg-white">
+            <Text className="border-b border-line px-4 py-3 text-[13px] font-medium text-muted">
+              Sold ({sold.length})
+            </Text>
+            {sold.length === 0 ? (
+              <Text className="px-4 py-5 text-[14px] text-muted">No sold listings</Text>
+            ) : (
+              sold.map((product) => (
+                <MyListingCard
+                  key={product.id}
+                  product={product}
+                  showMarkSold={false}
+                  onDelete={() => handleDelete(product.id)}
+                />
+              ))
+            )}
+          </View>
+        </View>
+
+        <Pressable
+          onPress={logout}
+          className="mt-4 h-12 items-center justify-center rounded-2xl border border-line bg-white"
+        >
+          <Text className="text-[15px] font-medium text-danger">Log out</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
