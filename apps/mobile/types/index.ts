@@ -144,6 +144,9 @@ export interface Order {
   amount: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
+  mobileNumber: string;
+  deliveryAddress: string;
+  locationDetails: string;
   createdAt: string;
   product: Pick<Product, "id" | "title" | "images" | "price">;
   buyer: PublicUser;

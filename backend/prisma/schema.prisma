@@ -126,14 +126,16 @@ model Message {
 }
 
 model Order {
-  id            String        @id @default(uuid())
-  productId     String
-  buyerId       String
-  sellerId      String
-  amount        Decimal       @db.Decimal(10, 2)
-  paymentMethod PaymentMethod
-  paymentStatus PaymentStatus @default(payment_pending)
-  createdAt     DateTime      @default(now())
+  id              String        @id @default(uuid())
+  productId       String
+  buyerId         String
+  sellerId        String
+  amount          Decimal       @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(payment_pending)
+  mobileNumber    String?
+  locationDetails String        @default("")
+  createdAt       DateTime      @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   buyer   User    @relation("OrderBuyer", fields: [buyerId], references: [id], onDelete: Cascade)

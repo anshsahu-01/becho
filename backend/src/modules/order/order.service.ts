@@ -73,6 +73,8 @@ export async function createOrder(buyerId: string, input: CreateOrderBody) {
       amount: product.price,
       paymentMethod: input.paymentMethod,
       paymentStatus: PaymentStatus.payment_pending,
+      mobileNumber: input.mobileNumber,
+      locationDetails: input.locationDetails,
     },
     include: orderInclude,
   });

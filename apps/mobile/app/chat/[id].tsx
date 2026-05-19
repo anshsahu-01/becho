@@ -259,7 +259,7 @@ export default function ChatScreen() {
 
       if (isEdit) {
         // Optimistic update for edit is optional, we just wait for server to keep it simple and safe
-        const updated = await chatService.editMessage(targetMessageId, content, token);
+        const updated = await chatService.editMessage(targetMessageId!, content, token);
         setConversation((prev) => {
           if (!prev) return prev;
           const msgs = prev.messages.map(m => m.id === targetMessageId ? { ...m, content, editedAt: updated.editedAt } : m);

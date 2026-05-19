@@ -4,11 +4,19 @@ import { apiRequest } from "./api";
 export async function createOrder(
   productId: string,
   paymentMethod: PaymentMethod,
+  mobileNumber: string,
+  deliveryAddress: string,
   token: string
 ) {
   const res = await apiRequest<ApiResponse<Order>>("/orders", {
     method: "POST",
-    body: { productId, paymentMethod },
+    body: {
+      productId,
+      paymentMethod,
+      mobileNumber,
+      deliveryAddress,
+      locationDetails: deliveryAddress,
+    },
     token,
   });
   return res.data;

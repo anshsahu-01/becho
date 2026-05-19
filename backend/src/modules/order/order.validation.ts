@@ -6,6 +6,15 @@ export const createOrderSchema = z.object({
   paymentMethod: z.nativeEnum(PaymentMethod, {
     message: "Invalid payment method"
   }),
+  mobileNumber: z
+    .string({ required_error: "Mobile number is required" })
+    .trim()
+    .regex(/^\d+$/, "Mobile number must contain digits only")
+    .min(10, "Mobile number must be at least 10 digits"),
+  locationDetails: z
+    .string({ required_error: "Location details are required" })
+    .trim()
+    .min(1, "Location details are required"),
 });
 
 export type CreateOrderBody = z.infer<typeof createOrderSchema>;

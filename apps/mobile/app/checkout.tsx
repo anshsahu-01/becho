@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View, Image as RNImage } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View, Image as RNImage, KeyboardAvoidingView, Platform } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import { Input } from "@/components/Input";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { EmptyState } from "@/components/EmptyState";
@@ -36,6 +37,9 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const { token } = useAuth();
   const removeItemFromCart = useCartStore((state) => state.removeItem);
@@ -64,11 +68,47 @@ export default function CheckoutScreen() {
     loadCheckoutProduct();
   }, [params.productId]);
 
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    const trimmedMobile = mobileNumber.trim();
+    const trimmedAddress = deliveryAddress.trim();
+
+    if (!trimmedMobile) {
+      errors.mobileNumber = "Mobile number is required";
+    } else if (!/^\d+$/.test(trimmedMobile)) {
+      errors.mobileNumber = "Mobile number must contain digits only";
+    } else if (trimmedMobile.length < 10) {
+      errors.mobileNumber = "Mobile number must be at least 10 digits";
+    }
+
+    if (!trimmedAddress) {
+      errors.deliveryAddress = paymentMethod === "Cash on Delivery"
+        ? "Pickup location is required"
+        : "Delivery address is required";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handlePlaceOrder = async (method: "COD" | "UPI") => {
     if (!token || !checkoutData.productId) return;
+
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       setOrderLoading(true);
-      await orderService.createOrder(checkoutData.productId, method, token);
+      const trimmedMobile = mobileNumber.trim();
+      const trimmedAddress = deliveryAddress.trim();
+      await orderService.createOrder(
+        checkoutData.productId,
+        method,
+        trimmedMobile,
+        trimmedAddress,
+        token
+      );
       await removeItemFromCart(checkoutData.productId);
       Alert.alert("Success", "Order placed successfully!");
       router.push("/(tabs)/profile");
@@ -134,16 +174,21 @@ export default function CheckoutScreen() {
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       <ScreenHeader title="Checkout" showBack />
 
-      <ScrollView
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
       >
-        <View className="rounded-2xl border border-line bg-white p-4">
-          <Text className="text-[18px] font-semibold text-ink">Order details</Text>
-          <Text className="mt-2 text-[14px] text-muted">
-            1 item selected for checkout.
-          </Text>
-        </View>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="rounded-2xl border border-line bg-white p-4">
+            <Text className="text-[18px] font-semibold text-ink">Order details</Text>
+            <Text className="mt-2 text-[14px] text-muted">
+              1 item selected for checkout.
+            </Text>
+          </View>
 
         <View className="mt-4 rounded-2xl border border-line bg-white p-4">
           <Text className="mb-3 text-[16px] font-semibold text-ink">Selected product</Text>
@@ -172,6 +217,40 @@ export default function CheckoutScreen() {
               </Text>
             </View>
           </View>
+        </View>
+
+        <View className="mt-4 rounded-2xl border border-line bg-white p-4">
+          <Text className="mb-3 text-[16px] font-semibold text-ink">Delivery details</Text>
+          <Input
+            label="Mobile Number"
+            placeholder="Enter 10-digit mobile number"
+            value={mobileNumber}
+            onChangeText={(text) => {
+              setMobileNumber(text);
+              if (validationErrors.mobileNumber) {
+                setValidationErrors((prev) => ({ ...prev, mobileNumber: "" }));
+              }
+            }}
+            keyboardType="numeric"
+            maxLength={15}
+            error={validationErrors.mobileNumber}
+          />
+          <Input
+            label={paymentMethod === "Cash on Delivery" ? "Pickup Location" : "Delivery Address"}
+            placeholder={paymentMethod === "Cash on Delivery" ? "Enter pickup location" : "Enter delivery address"}
+            value={deliveryAddress}
+            onChangeText={(text) => {
+              setDeliveryAddress(text);
+              if (validationErrors.deliveryAddress) {
+                setValidationErrors((prev) => ({ ...prev, deliveryAddress: "" }));
+              }
+            }}
+            multiline={true}
+            numberOfLines={3}
+            inputClassName="h-20 py-2"
+            style={{ textAlignVertical: "top" }}
+            error={validationErrors.deliveryAddress}
+          />
         </View>
 
         <View className="mt-4 rounded-2xl border border-line bg-white p-4">
@@ -268,7 +347,8 @@ export default function CheckoutScreen() {
             </Pressable>
           )}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
