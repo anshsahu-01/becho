@@ -8,15 +8,14 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSignUp } from "@clerk/clerk-expo";
 import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { useAuth } from "@/hooks/useAuth";
-import { ApiError } from "@/services/api";
 
 export default function RegisterScreen() {
-  const { register } = useAuth();
+  const { signUp, isLoaded } = useSignUp();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +24,8 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
+    if (!isLoaded) return;
+
     if (!name.trim() || !email.trim() || password.length < 6) {
       setError("Fill all fields. Password must be 6+ characters.");
       return;
@@ -33,15 +34,31 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
       setError("");
-      await register({
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
+
+      const nameParts = name.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      await signUp.create({
+        emailAddress: email.trim().toLowerCase(),
         password,
-        collegeName: collegeName.trim() || undefined,
+        firstName,
+        lastName,
+        unsafeMetadata: {
+          collegeName: collegeName.trim() || undefined,
+        },
       });
-      router.replace("/(auth)/login");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Registration failed");
+
+      await signUp.prepareEmailAddressVerification({
+        strategy: "email_code",
+      });
+
+      router.push({
+        pathname: "/(auth)/verify-email",
+        params: { email: email.trim().toLowerCase() },
+      });
+    } catch (err: any) {
+      setError(err?.errors?.[0]?.message || err?.message || "Registration failed");
     } finally {
       setLoading(false);
     }

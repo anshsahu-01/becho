@@ -34,7 +34,8 @@
         {
           "photosPermission": "Allow Just Sell to access your photos to list items."
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

@@ -7,12 +7,13 @@ export const createOrderSchema = z.object({
     message: "Invalid payment method"
   }),
   mobileNumber: z
-    .string({ required_error: "Mobile number is required" })
+    .string()
     .trim()
+    .min(1, "Mobile number is required")
     .regex(/^\d+$/, "Mobile number must contain digits only")
     .min(10, "Mobile number must be at least 10 digits"),
   locationDetails: z
-    .string({ required_error: "Location details are required" })
+    .string()
     .trim()
     .min(1, "Location details are required"),
 });

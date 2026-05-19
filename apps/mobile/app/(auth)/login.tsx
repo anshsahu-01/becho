@@ -9,20 +9,21 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSignIn } from "@clerk/clerk-expo";
 import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
-import { useAuth } from "@/hooks/useAuth";
-import { ApiError } from "@/services/api";
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { signIn, setActive, isLoaded } = useSignIn();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    if (!isLoaded) return;
+
     if (!email.trim() || !password) {
       setError("Enter email and password");
       return;
@@ -31,10 +32,19 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       setError("");
-      await login(email.trim().toLowerCase(), password);
-      router.replace("/(tabs)");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Login failed");
+      
+      const result = await signIn.create({
+        identifier: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+      } else {
+        setError("Login incomplete. Please verify details.");
+      }
+    } catch (err: any) {
+      setError(err?.errors?.[0]?.message || err?.message || "Login failed");
     } finally {
       setLoading(false);
     }
