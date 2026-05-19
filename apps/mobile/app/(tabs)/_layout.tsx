@@ -18,7 +18,11 @@ function TabIcon({ name, focused }: TabIconProps) {
 }
 
 export default function TabsLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isHydrated } = useAuth();
+
+  if (!isHydrated) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;

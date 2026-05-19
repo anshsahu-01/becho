@@ -30,6 +30,7 @@ function InitialLayout() {
   useEffect(() => {
     const syncSession = async () => {
       if (isSignedIn) {
+        useAuthStore.setState({ isHydrated: false });
         try {
           const token = await getToken();
           if (token) {
@@ -51,7 +52,7 @@ function InitialLayout() {
     if (isLoaded) {
       syncSession();
     }
-  }, [isLoaded, isSignedIn, getToken]);
+  }, [isLoaded, isSignedIn]);
 
   // Hydrate local stores on startup
   useEffect(() => {
@@ -60,6 +61,7 @@ function InitialLayout() {
   }, [hydrateCart, hydrateFavorites]);
 
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  const segmentsKey = segments.join("/");
 
   useEffect(() => {
     if (!isLoaded || !isHydrated) return;
@@ -73,7 +75,7 @@ function InitialLayout() {
       // Redirect to main tabs if signed in and attempting to access auth screen
       router.replace("/(tabs)");
     }
-  }, [isSignedIn, isLoaded, isHydrated, segments]);
+  }, [isSignedIn, isLoaded, isHydrated, segmentsKey]);
 
   if (!isLoaded || !isHydrated) {
     return <LoadingState />;

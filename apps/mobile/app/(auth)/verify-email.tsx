@@ -49,7 +49,7 @@ export default function VerifyEmailScreen() {
   }, []);
 
   const handleVerify = async (val: string) => {
-    if (!isLoaded || !signUp) return;
+    if (!isLoaded || !signUp || loading) return;
     try {
       setLoading(true);
       setError("");
