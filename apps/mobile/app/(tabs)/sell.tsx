@@ -39,7 +39,7 @@ export default function SellScreen() {
         token
       );
       Alert.alert("Listed", "Your item is now live.", [
-        { text: "OK", onPress: () => router.replace("/(tabs)") },
+        { text: "OK", onPress: () => router.navigate("/(tabs)") },
       ]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to list item");

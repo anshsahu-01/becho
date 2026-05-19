@@ -1,6 +1,7 @@
+import { ActivityIndicator, View } from "react-native";
 import "../global.css";
 import { useEffect } from "react";
-import { Stack, useSegments, useRouter } from "expo-router";
+import { Stack, useSegments, useRouter, useRootNavigationState } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ClerkProvider, ClerkLoaded, useAuth as useClerkAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@/utils/tokenCache";
@@ -22,6 +23,8 @@ function InitialLayout() {
   const { isLoaded, isSignedIn, getToken } = useClerkAuth();
   const segments = useSegments();
   const router = useRouter();
+  const navigationState = useRootNavigationState();
+  const isRouterReady = !!navigationState?.key;
 
   const hydrateCart = useCartStore((state) => state.hydrate);
   const hydrateFavorites = useFavoritesStore((state) => state.hydrate);
@@ -64,20 +67,20 @@ function InitialLayout() {
   const segmentsKey = segments.join("/");
 
   useEffect(() => {
-    if (!isLoaded || !isHydrated) return;
+    if (!isLoaded || !isHydrated || !isRouterReady) return;
 
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!isSignedIn && !inAuthGroup) {
       // Redirect to login if signed out and attempting to access app
-      router.replace("/(auth)/login");
+      router.navigate("/(auth)/login");
     } else if (isSignedIn && inAuthGroup) {
       // Redirect to main tabs if signed in and attempting to access auth screen
-      router.replace("/(tabs)");
+      router.navigate("/(tabs)");
     }
-  }, [isSignedIn, isLoaded, isHydrated, segmentsKey]);
+  }, [isSignedIn, isLoaded, isHydrated, segmentsKey, isRouterReady]);
 
-  if (!isLoaded || !isHydrated) {
+  if (!isRouterReady) {
     return <LoadingState />;
   }
 
@@ -105,6 +108,11 @@ function InitialLayout() {
           options={{ headerShown: false, presentation: "card" }}
         />
       </Stack>
+      {(!isLoaded || !isHydrated) && (
+        <View className="absolute inset-0 bg-white items-center justify-center z-[9999]">
+          <ActivityIndicator size="large" color="#1A1A1A" />
+        </View>
+      )}
     </>
   );
 }
