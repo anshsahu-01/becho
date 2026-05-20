@@ -16,7 +16,7 @@ import { cn } from "@/utils/cn";
 
 export default function ChatsScreen() {
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { token, user, isHydrated } = useAuth();
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,7 +46,7 @@ export default function ChatsScreen() {
   );
 
   useEffect(() => {
-    if (!token || !user?.id) return;
+    if (!isHydrated || !token || !user?.id) return;
     
     const socket = connectSocket(token);
 
@@ -107,7 +107,7 @@ export default function ChatsScreen() {
       socket.off("conversation_cleared", handleConversationCleared);
       socket.off("conversation_deleted", handleConversationDeleted);
     };
-  }, [token, user?.id, loadChats]);
+  }, [isHydrated, token, user?.id, loadChats]);
 
   if (loading && conversations.length === 0) {
     return <LoadingState />;

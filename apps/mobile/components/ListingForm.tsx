@@ -62,9 +62,31 @@ export function ListingForm({
   );
   const [images, setImages] = useState<string[]>(initialValues?.images ?? defaultValues.images);
   const [localError, setLocalError] = useState("");
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   useEffect(() => {
-    categoryService.getCategories().then(setCategories).catch(() => {});
+    let mounted = true;
+
+    const loadCategories = async () => {
+      try {
+        const data = await categoryService.getCategories();
+        if (!mounted) return;
+        setCategories(data);
+      } catch {
+        if (!mounted) return;
+        setCategories([]);
+      } finally {
+        if (mounted) {
+          setCategoriesLoading(false);
+        }
+      }
+    };
+
+    loadCategories();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -158,14 +180,20 @@ export function ListingForm({
 
       <Text className="mb-2 mt-2 text-[13px] font-medium text-muted">Category</Text>
       <View className="mb-4 flex-row flex-wrap gap-2">
-        {categories.map((cat) => (
-          <Chip
-            key={cat.id}
-            label={cat.name}
-            active={categoryId === cat.id}
-            onPress={() => setCategoryId(cat.id)}
-          />
-        ))}
+        {categoriesLoading ? (
+          <Text className="text-[13px] text-muted">Loading categories...</Text>
+        ) : categories.length === 0 ? (
+          <Text className="text-[13px] text-danger">Categories are unavailable right now.</Text>
+        ) : (
+          categories.map((cat) => (
+            <Chip
+              key={cat.id}
+              label={cat.name}
+              active={categoryId === cat.id}
+              onPress={() => setCategoryId(cat.id)}
+            />
+          ))
+        )}
       </View>
 
       <Text className="mb-2 text-[13px] font-medium text-muted">Condition</Text>

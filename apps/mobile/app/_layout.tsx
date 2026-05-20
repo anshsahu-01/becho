@@ -8,10 +8,11 @@ import { tokenCache } from "@/utils/tokenCache";
 import { LoadingState } from "@/components/LoadingState";
 import { useCartStore } from "@/store/cartStore";
 import { useFavoritesStore } from "@/store/favoritesStore";
-import { useAuth } from "@/hooks/useAuth";
 
 import * as authService from "@/services/auth.service";
 import { useAuthStore } from "@/store/authStore";
+import { clearAuthStorage } from "@/utils/storage";
+import { disconnectSocket } from "@/services/socket.service";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
@@ -27,7 +28,10 @@ function InitialLayout() {
   const isRouterReady = !!navigationState?.key;
 
   const hydrateCart = useCartStore((state) => state.hydrate);
+  const verifyCartItems = useCartStore((state) => state.verifyItems);
+  const setCartOwnerUserId = useCartStore((state) => state.setOwnerUserId);
   const hydrateFavorites = useFavoritesStore((state) => state.hydrate);
+  const authUserId = useAuthStore((state) => state.user?.id ?? null);
 
   // Sync session and load user profile
   useEffect(() => {
@@ -41,13 +45,22 @@ function InitialLayout() {
             const user = await authService.getMe(token);
             useAuthStore.setState({ user, isHydrated: true });
           } else {
+            disconnectSocket();
+            await clearAuthStorage();
+            await setCartOwnerUserId(null);
             useAuthStore.setState({ token: null, user: null, isHydrated: true });
           }
         } catch (error) {
           console.error("Error syncing session:", error);
+          disconnectSocket();
+          await clearAuthStorage();
+          await setCartOwnerUserId(null);
           useAuthStore.setState({ token: null, user: null, isHydrated: true });
         }
       } else {
+        disconnectSocket();
+        await clearAuthStorage();
+        await setCartOwnerUserId(null);
         useAuthStore.setState({ token: null, user: null, isHydrated: true });
       }
     };
@@ -59,12 +72,22 @@ function InitialLayout() {
 
   // Hydrate local stores on startup
   useEffect(() => {
-    hydrateCart();
     hydrateFavorites();
-  }, [hydrateCart, hydrateFavorites]);
+  }, [hydrateFavorites]);
 
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const segmentsKey = segments.join("/");
+
+  useEffect(() => {
+    if (!isLoaded || !isHydrated) return;
+
+    const syncCartState = async () => {
+      await hydrateCart(authUserId);
+      await verifyCartItems();
+    };
+
+    syncCartState();
+  }, [authUserId, hydrateCart, isHydrated, isLoaded, verifyCartItems]);
 
   useEffect(() => {
     if (!isLoaded || !isHydrated || !isRouterReady) return;

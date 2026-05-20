@@ -9,17 +9,42 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSignIn } from "@clerk/clerk-expo";
+import { useAuth as useClerkAuth, useSignIn, useUser } from "@clerk/clerk-expo";
 import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
+import * as authService from "@/services/auth.service";
+import { useAuthStore } from "@/store/authStore";
+import { setStoredUser, setToken } from "@/utils/storage";
 
 export default function LoginScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
+  const { getToken } = useClerkAuth();
+  const { user: clerkUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const logSignInState = (label: string) => {
+    console.log("SIGN IN STATUS:", label, signIn?.status);
+    console.log("FIRST FACTOR:", signIn?.firstFactorVerification);
+    console.log("SECOND FACTOR:", signIn?.secondFactorVerification);
+  };
+
+  const syncLocalSession = async () => {
+    await clerkUser?.reload();
+
+    const token = await getToken();
+    if (!token) {
+      throw new Error("Could not restore your session. Please try again.");
+    }
+
+    const user = await authService.getMe(token);
+    await setToken(token);
+    await setStoredUser(user);
+    useAuthStore.setState({ token, user, isHydrated: true });
+  };
 
   const handleLogin = async () => {
     if (!isLoaded) return;
@@ -32,18 +57,41 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       setError("");
-      
-      const result = await signIn.create({
+
+      useAuthStore.setState({ isHydrated: false });
+
+      const initialResult = await signIn.create({
         identifier: email.trim().toLowerCase(),
         password,
       });
+      logSignInState("after signIn.create");
 
-      if (result.status === "complete") {
+      let result = initialResult;
+
+      if (result.status === "needs_first_factor") {
+        result = await signIn.attemptFirstFactor({
+          strategy: "password",
+          password,
+        });
+        logSignInState("after signIn.attemptFirstFactor(password)");
+      }
+
+      if (result.status === "complete" && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
+        await syncLocalSession();
+        router.replace("/(tabs)");
+      } else if (result.status === "needs_second_factor") {
+        useAuthStore.setState({ isHydrated: true });
+        setError("This account requires an additional Clerk verification step before sign-in can finish.");
+      } else if (result.status === "needs_new_password") {
+        useAuthStore.setState({ isHydrated: true });
+        setError("A password reset is required for this account before you can sign in.");
       } else {
+        useAuthStore.setState({ isHydrated: true });
         setError("Login incomplete. Please verify details.");
       }
     } catch (err: any) {
+      useAuthStore.setState({ isHydrated: true });
       setError(err?.errors?.[0]?.message || err?.message || "Login failed");
     } finally {
       setLoading(false);

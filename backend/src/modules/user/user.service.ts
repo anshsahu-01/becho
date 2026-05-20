@@ -96,12 +96,12 @@ export async function deleteAccount(userId: string, input: DeleteAccountInput) {
     include: {
       ordersAsSeller: {
         where: {
-          paymentStatus: { in: ["payment_pending"] },
+          orderStatus: { in: ["pending", "processing", "shipped"] },
         },
       },
       ordersAsBuyer: {
         where: {
-          paymentStatus: { in: ["payment_pending"] },
+          orderStatus: { in: ["pending", "processing", "shipped"] },
         },
       },
     },

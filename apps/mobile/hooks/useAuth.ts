@@ -1,5 +1,8 @@
 import { useAuth as useClerkAuth } from "@clerk/clerk-expo";
 import { useAuthStore } from "@/store/authStore";
+import { clearAuthStorage } from "@/utils/storage";
+import { disconnectSocket } from "@/services/socket.service";
+import { useCartStore } from "@/store/cartStore";
 
 export function useAuth() {
   const { isSignedIn, isLoaded, signOut } = useClerkAuth();
@@ -15,6 +18,9 @@ export function useAuth() {
     } catch (err) {
       console.error("Clerk signOut error:", err);
     }
+    disconnectSocket();
+    await clearAuthStorage();
+    await useCartStore.getState().setOwnerUserId(null);
     useAuthStore.setState({ user: null, token: null });
   };
 

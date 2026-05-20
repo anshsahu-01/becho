@@ -1,5 +1,7 @@
-import { ApiResponse, Order, PaymentMethod, PaymentStatus } from "@/types";
+import { ApiResponse, Order, OrderStatus, PaymentMethod, PaymentStatus } from "@/types";
 import { apiRequest } from "./api";
+
+export type OrderActionStatus = PaymentStatus | Extract<OrderStatus, "shipped" | "delivered">;
 
 export async function createOrder(
   productId: string,
@@ -38,7 +40,7 @@ export async function getMySales(token: string) {
 
 export async function updateOrderStatus(
   orderId: string,
-  status: PaymentStatus,
+  status: OrderActionStatus,
   token: string
 ) {
   const res = await apiRequest<ApiResponse<Order>>(`/orders/${orderId}/status`, {

@@ -29,6 +29,14 @@ enum PaymentStatus {
   cancelled
 }
 
+enum OrderStatus {
+  pending
+  processing
+  shipped
+  delivered
+  cancelled
+}
+
 model User {
   id           String   @id @default(uuid())
   clerkId      String?  @unique
@@ -139,6 +147,7 @@ model Order {
   amount          Decimal       @db.Decimal(10, 2)
   paymentMethod   PaymentMethod
   paymentStatus   PaymentStatus @default(payment_pending)
+  orderStatus     OrderStatus   @default(pending)
   mobileNumber    String?
   locationDetails String        @default("")
   createdAt       DateTime      @default(now())
@@ -149,4 +158,5 @@ model Order {
 
   @@index([buyerId])
   @@index([sellerId])
+  @@index([orderStatus])
 }

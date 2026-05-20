@@ -58,7 +58,7 @@ function TypingIndicator() {
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { token, user, isHydrated } = useAuth();
   const insets = useSafeAreaInsets();
   
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
@@ -89,7 +89,7 @@ export default function ChatScreen() {
   }, [loadMessages]);
 
   useEffect(() => {
-    if (!token || !id || !user?.id) return;
+    if (!isHydrated || !token || !id || !user?.id) return;
     
     const socket = connectSocket(token);
     socket.emit("join_chat", id);
@@ -202,7 +202,7 @@ export default function ChatScreen() {
       socket.off("conversation_cleared", handleConversationCleared);
       socket.off("conversation_deleted", handleConversationDeleted);
     };
-  }, [id, token, user?.id, router]);
+  }, [id, isHydrated, token, user?.id, router]);
 
   useEffect(() => {
     if (conversation?.messages.length && user?.id) {

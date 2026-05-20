@@ -12,13 +12,18 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSignUp } from "@clerk/clerk-expo";
+import { useAuth as useClerkAuth, useSignUp, useUser } from "@clerk/clerk-expo";
 import { Button } from "@/components/Button";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Ionicons } from "@expo/vector-icons";
+import * as authService from "@/services/auth.service";
+import { useAuthStore } from "@/store/authStore";
+import { setStoredUser, setToken } from "@/utils/storage";
 
 export default function VerifyEmailScreen() {
   const { signUp, setActive, isLoaded } = useSignUp();
+  const { getToken } = useClerkAuth();
+  const { user: clerkUser } = useUser();
   const { email } = useLocalSearchParams<{ email: string }>();
 
   const [code, setCode] = useState("");
@@ -28,6 +33,25 @@ export default function VerifyEmailScreen() {
   const [resending, setResending] = useState(false);
 
   const inputRef = useRef<TextInput>(null);
+
+  const logSignUpState = (label: string) => {
+    console.log("SIGN UP STATUS:", label, signUp?.status);
+    console.log("CREATED SESSION ID:", signUp?.createdSessionId);
+  };
+
+  const syncLocalSession = async () => {
+    await clerkUser?.reload();
+
+    const token = await getToken();
+    if (!token) {
+      throw new Error("Could not restore your session. Please try again.");
+    }
+
+    const user = await authService.getMe(token);
+    await setToken(token);
+    await setStoredUser(user);
+    useAuthStore.setState({ token, user, isHydrated: true });
+  };
 
   // Cooldown countdown timer
   useEffect(() => {
@@ -53,6 +77,7 @@ export default function VerifyEmailScreen() {
     try {
       setLoading(true);
       setError("");
+      useAuthStore.setState({ isHydrated: false });
       Keyboard.dismiss();
       // Wait 150ms for keyboard dismissal animation to complete before transitioning layout
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -60,13 +85,18 @@ export default function VerifyEmailScreen() {
       const result = await signUp.attemptEmailAddressVerification({
         code: val,
       });
+      logSignUpState("after signUp.attemptEmailAddressVerification");
 
-      if (result.status === "complete") {
+      if (result.status === "complete" && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
+        await syncLocalSession();
+        router.replace("/(tabs)");
       } else {
+        useAuthStore.setState({ isHydrated: true });
         setError("Verification incomplete. Please try again.");
       }
     } catch (err: any) {
+      useAuthStore.setState({ isHydrated: true });
       setError(err?.errors?.[0]?.message || err?.message || "Invalid code");
       setCode(""); // clear input on error so they can re-try
       // Refocus input

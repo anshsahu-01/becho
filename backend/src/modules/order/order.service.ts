@@ -1,4 +1,4 @@
-import { PaymentStatus, Prisma, ProductStatus } from "@prisma/client";
+import { OrderStatus, PaymentStatus, Prisma, ProductStatus } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../utils/AppError";
 import { CreateOrderBody, UpdateOrderStatusBody } from "./order.validation";
@@ -73,6 +73,7 @@ export async function createOrder(buyerId: string, input: CreateOrderBody) {
       amount: product.price,
       paymentMethod: input.paymentMethod,
       paymentStatus: PaymentStatus.payment_pending,
+      orderStatus: OrderStatus.pending,
       mobileNumber: input.mobileNumber,
       locationDetails: input.locationDetails,
     },
@@ -104,46 +105,144 @@ export async function getMySales(sellerId: string) {
 
 export async function updateOrderStatus(
   orderId: string,
-  sellerId: string,
+  actorId: string,
   input: UpdateOrderStatusBody
 ) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { id: true, sellerId: true, productId: true },
-  });
-
-  if (!order) {
-    throw new AppError("Order not found", 404);
-  }
-
-  if (order.sellerId !== sellerId) {
-    throw new AppError("You are not authorized to update this order", 403);
-  }
-
   const updatedOrder = await prisma.$transaction(async (tx) => {
-    const res = await tx.order.update({
+    const order = await tx.order.findUnique({
       where: { id: orderId },
-      data: { paymentStatus: input.status },
-      include: orderInclude,
+      select: {
+        id: true,
+        buyerId: true,
+        sellerId: true,
+        productId: true,
+        paymentStatus: true,
+        orderStatus: true,
+      },
     });
 
+    if (!order) {
+      throw new AppError("Order not found", 404);
+    }
+
+    const isSeller = order.sellerId === actorId;
+    const isBuyer = order.buyerId === actorId;
+
+    if (!isSeller && !isBuyer) {
+      throw new AppError("You are not authorized to update this order", 403);
+    }
+
     if (input.status === PaymentStatus.confirmed) {
+      if (!isSeller) {
+        throw new AppError("Only the seller can confirm this order", 403);
+      }
+
+      if (order.orderStatus !== OrderStatus.pending) {
+        throw new AppError("Only pending orders can be confirmed", 400);
+      }
+
+      const product = await tx.product.findUnique({
+        where: { id: order.productId },
+        select: { id: true, status: true, isSold: true },
+      });
+
+      if (!product) {
+        throw new AppError("Product not found", 404);
+      }
+
+      if (product.status === ProductStatus.SOLD || product.isSold) {
+        throw new AppError("This product has already been marked as sold", 400);
+      }
+
+      const confirmedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          paymentStatus: PaymentStatus.confirmed,
+          orderStatus: OrderStatus.processing,
+        },
+        include: orderInclude,
+      });
+
       await tx.product.update({
         where: { id: order.productId },
         data: { status: ProductStatus.SOLD, isSold: true },
       });
-      // also cancel other pending orders for this product
+
       await tx.order.updateMany({
         where: {
           productId: order.productId,
           id: { not: orderId },
-          paymentStatus: PaymentStatus.payment_pending,
+          orderStatus: OrderStatus.pending,
         },
-        data: { paymentStatus: PaymentStatus.cancelled },
+        data: {
+          paymentStatus: PaymentStatus.cancelled,
+          orderStatus: OrderStatus.cancelled,
+        },
+      });
+
+      return confirmedOrder;
+    }
+
+    if (input.status === "shipped") {
+      if (!isSeller) {
+        throw new AppError("Only the seller can mark this order as shipped", 403);
+      }
+
+      if (order.orderStatus !== OrderStatus.processing) {
+        throw new AppError("Only processing orders can be marked as shipped", 400);
+      }
+
+      return tx.order.update({
+        where: { id: orderId },
+        data: { orderStatus: OrderStatus.shipped },
+        include: orderInclude,
       });
     }
 
-    return res;
+    if (input.status === "delivered") {
+      if (!isSeller) {
+        throw new AppError("Only the seller can mark this order as delivered", 403);
+      }
+
+      if (order.orderStatus !== OrderStatus.shipped) {
+        throw new AppError("Only shipped orders can be marked as delivered", 400);
+      }
+
+      return tx.order.update({
+        where: { id: orderId },
+        data: { orderStatus: OrderStatus.delivered },
+        include: orderInclude,
+      });
+    }
+
+    if (
+      order.orderStatus !== OrderStatus.pending &&
+      order.orderStatus !== OrderStatus.processing
+    ) {
+      throw new AppError("Completed, shipped, or cancelled orders cannot be cancelled", 400);
+    }
+
+    if (!isSeller && !isBuyer) {
+      throw new AppError("You are not authorized to cancel this order", 403);
+    }
+
+    const cancelledOrder = await tx.order.update({
+      where: { id: orderId },
+      data: {
+        paymentStatus: PaymentStatus.cancelled,
+        orderStatus: OrderStatus.cancelled,
+      },
+      include: orderInclude,
+    });
+
+    if (order.orderStatus === OrderStatus.processing) {
+      await tx.product.update({
+        where: { id: order.productId },
+        data: { status: ProductStatus.ACTIVE, isSold: false },
+      });
+    }
+
+    return cancelledOrder;
   });
 
   return formatOrder(updatedOrder);

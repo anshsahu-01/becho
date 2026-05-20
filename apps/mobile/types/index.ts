@@ -139,6 +139,7 @@ export interface CreateProductInput {
 export type PaymentMethod = "COD" | "UPI";
 
 export type PaymentStatus = "payment_pending" | "confirmed" | "cancelled";
+export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
 
 export interface Order {
   id: string;
@@ -148,6 +149,7 @@ export interface Order {
   amount: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
+  orderStatus: OrderStatus;
   mobileNumber: string;
   deliveryAddress: string;
   locationDetails: string;

@@ -25,8 +25,13 @@ export const orderIdParamSchema = z.object({
 });
 
 export const updateOrderStatusSchema = z.object({
-  status: z.enum([PaymentStatus.confirmed, PaymentStatus.cancelled], {
-    message: "Status must be 'confirmed' or 'cancelled'"
+  status: z.enum([
+    PaymentStatus.confirmed,
+    PaymentStatus.cancelled,
+    "shipped",
+    "delivered",
+  ], {
+    message: "Status must be 'confirmed', 'cancelled', 'shipped', or 'delivered'",
   }),
 });
 

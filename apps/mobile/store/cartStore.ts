@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { Product } from "@/types";
+import * as productService from "@/services/product.service";
+import { useAuthStore } from "@/store/authStore";
 
 const CART_STORAGE_KEY = "just_sell_cart";
 
@@ -16,33 +18,67 @@ export type CartItem = {
 
 type CartState = {
   items: CartItem[];
+  ownerUserId: string | null;
   isHydrated: boolean;
-  hydrate: () => Promise<void>;
+  hydrate: (userId?: string | null) => Promise<void>;
   addItem: (product: Product) => Promise<{ added: boolean }>;
   removeItem: (productId: string) => Promise<void>;
   clearCart: () => Promise<void>;
   verifyItems: () => Promise<void>;
+  setOwnerUserId: (userId: string | null) => Promise<void>;
 };
 
-async function persistItems(items: CartItem[]) {
-  await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+type PersistedCart = {
+  ownerUserId: string | null;
+  items: CartItem[];
+};
+
+async function persistItems(items: CartItem[], ownerUserId: string | null) {
+  const payload: PersistedCart = { ownerUserId, items };
+  await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(payload));
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
+  ownerUserId: null,
   isHydrated: false,
 
-  hydrate: async () => {
+  hydrate: async (userId = null) => {
     try {
       const raw = await AsyncStorage.getItem(CART_STORAGE_KEY);
-      const items = raw ? (JSON.parse(raw) as CartItem[]) : [];
-      set({ items, isHydrated: true });
+      if (!raw) {
+        set({ items: [], ownerUserId: userId, isHydrated: true });
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as PersistedCart | CartItem[];
+      const persisted = Array.isArray(parsed)
+        ? { ownerUserId: null, items: parsed }
+        : parsed;
+
+      if (persisted.ownerUserId !== userId) {
+        set({ items: [], ownerUserId: userId, isHydrated: true });
+        await persistItems([], userId);
+        return;
+      }
+
+      set({
+        items: persisted.items ?? [],
+        ownerUserId: userId,
+        isHydrated: true,
+      });
     } catch {
-      set({ items: [], isHydrated: true });
+      set({ items: [], ownerUserId: userId, isHydrated: true });
     }
   },
 
   addItem: async (product) => {
+    const ownerUserId = useAuthStore.getState().user?.id ?? null;
+    if (get().ownerUserId !== ownerUserId) {
+      set({ items: [], ownerUserId });
+      await persistItems([], ownerUserId);
+    }
+
     const existing = get().items.find((item) => item.productId === product.id);
     if (existing) {
       return { added: false };
@@ -61,31 +97,58 @@ export const useCartStore = create<CartState>((set, get) => ({
       },
     ];
 
-    set({ items: nextItems });
-    await persistItems(nextItems);
+    set({ items: nextItems, ownerUserId });
+    await persistItems(nextItems, ownerUserId);
     return { added: true };
   },
 
   removeItem: async (productId) => {
     const nextItems = get().items.filter((item) => item.productId !== productId);
     set({ items: nextItems });
-    await persistItems(nextItems);
+    await persistItems(nextItems, get().ownerUserId);
   },
 
   clearCart: async () => {
-    set({ items: [] });
-    await AsyncStorage.removeItem(CART_STORAGE_KEY);
+    set({ items: [], ownerUserId: get().ownerUserId });
+    await persistItems([], get().ownerUserId);
   },
 
   verifyItems: async () => {
     const currentItems = get().items;
     if (currentItems.length === 0) return;
 
-    // We only need to check if products are still active.
-    // For simplicity, we can fetch all my products or just rely on getProducts API
-    // Actually, making N requests is bad, but for MVP it's fine.
-    // We can just rely on the existing cart items, we'll implement it as a simple Promise.all
-    // But since we can't easily import productService here due to circular deps or api context,
-    // we'll just leave verifyItems as a placeholder here and do it in the component.
+    const checkedItems = await Promise.all(
+      currentItems.map(async (item) => {
+        try {
+          const product = await productService.getProductById(item.productId);
+          if (product.isSold || product.status !== "ACTIVE") {
+            return null;
+          }
+
+          return {
+            ...item,
+            title: product.title,
+            price: product.price,
+            image: product.images?.[0] ?? item.image,
+            sellerId: product.userId,
+            sellerName: product.seller.name,
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const validItems = checkedItems.filter((item): item is CartItem => Boolean(item));
+    if (validItems.length !== currentItems.length) {
+      set({ items: validItems });
+      await persistItems(validItems, get().ownerUserId);
+    }
+  },
+
+  setOwnerUserId: async (userId) => {
+    if (get().ownerUserId === userId) return;
+    set({ items: [], ownerUserId: userId });
+    await persistItems([], userId);
   },
 }));

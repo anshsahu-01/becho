@@ -11,11 +11,16 @@ const getApiUrl = () => {
 };
 
 let socket: Socket | null = null;
+let activeToken: string | null = null;
 
 export const connectSocket = (token: string) => {
+  if (socket && activeToken === token) {
+    if (socket.connected || socket.active) return socket;
+  }
+
   if (socket) {
-    if (socket.connected) return socket;
     socket.disconnect();
+    socket = null;
   }
 
   socket = io(getApiUrl(), {
@@ -23,9 +28,13 @@ export const connectSocket = (token: string) => {
       token,
     },
     transports: ["websocket"],
-    autoConnect: true,
+    autoConnect: false,
     reconnection: true,
+    reconnectionAttempts: 2,
+    reconnectionDelay: 1500,
+    timeout: 10000,
   });
+  activeToken = token;
 
   socket.on("connect", () => {
     console.log("Socket connected:", socket?.id);
@@ -33,7 +42,17 @@ export const connectSocket = (token: string) => {
 
   socket.on("connect_error", (error) => {
     console.error("Socket connect error:", error);
+    const message = error?.message?.toLowerCase() ?? "";
+    if (message.includes("authentication")) {
+      socket?.disconnect();
+    }
   });
+
+  socket.on("disconnect", (reason) => {
+    console.log("Socket disconnected:", reason);
+  });
+
+  socket.connect();
 
   return socket;
 };
@@ -47,4 +66,5 @@ export const disconnectSocket = () => {
     socket.disconnect();
     socket = null;
   }
+  activeToken = null;
 };

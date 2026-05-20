@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Modal,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -38,7 +37,11 @@ export default function ProfileScreen() {
   const [mySales, setMySales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [pendingOrderActionId, setPendingOrderActionId] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<{
+    orderId: string;
+    isSeller: boolean;
+  } | null>(null);
 
   // Delete account modal state
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -121,20 +124,58 @@ export default function ProfileScreen() {
 
   const handleUpdateOrderStatus = async (
     orderId: string,
-    status: "confirmed" | "cancelled"
+    status: "confirmed" | "cancelled" | "shipped" | "delivered"
   ) => {
-    if (!token) return;
+    if (!token) return false;
+    const isSellerAction = mySales.some((order) => order.id === orderId);
+    const setOrders = isSellerAction ? setMySales : setMyOrders;
+    const previousOrders = isSellerAction ? mySales : myOrders;
+
     try {
-      setActionLoading(true);
-      await orderService.updateOrderStatus(orderId, status, token);
+      setPendingOrderActionId(orderId);
+
+      if (status === "cancelled") {
+        setOrders((current) =>
+          current.map((order) =>
+            order.id === orderId
+              ? { ...order, paymentStatus: "cancelled", orderStatus: "cancelled" }
+              : order
+          )
+        );
+      }
+
+      const updatedOrder = await orderService.updateOrderStatus(orderId, status, token);
+      setOrders((current) =>
+        current.map((order) => (order.id === orderId ? updatedOrder : order))
+      );
+
       await loadListings(true);
+      return true;
     } catch (err) {
+      if (status === "cancelled") {
+        setOrders(previousOrders);
+      }
+
       Alert.alert(
         "Failed",
         err instanceof ApiError ? err.message : "Could not update order status"
       );
+      return false;
     } finally {
-      setActionLoading(false);
+      setPendingOrderActionId(null);
+    }
+  };
+
+  const openCancelModal = (orderId: string, isSeller: boolean) => {
+    if (pendingOrderActionId) return;
+    setCancelTarget({ orderId, isSeller });
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    const didCancel = await handleUpdateOrderStatus(cancelTarget.orderId, "cancelled");
+    if (didCancel) {
+      setCancelTarget(null);
     }
   };
 
@@ -320,7 +361,12 @@ export default function ProfileScreen() {
               <Text style={styles.emptyText}>No orders yet</Text>
             ) : (
               myOrders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  loading={pendingOrderActionId === order.id}
+                  onCancel={() => openCancelModal(order.id, false)}
+                />
               ))
             )}
           </View>
@@ -338,9 +384,11 @@ export default function ProfileScreen() {
                   key={order.id}
                   order={order}
                   isSeller
-                  loading={actionLoading}
+                  loading={pendingOrderActionId === order.id}
                   onConfirm={() => handleUpdateOrderStatus(order.id, "confirmed")}
-                  onCancel={() => handleUpdateOrderStatus(order.id, "cancelled")}
+                  onShip={() => handleUpdateOrderStatus(order.id, "shipped")}
+                  onDeliver={() => handleUpdateOrderStatus(order.id, "delivered")}
+                  onCancel={() => openCancelModal(order.id, true)}
                 />
               ))
             )}
@@ -373,6 +421,50 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal
+        visible={Boolean(cancelTarget)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!pendingOrderActionId) {
+            setCancelTarget(null);
+          }
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {cancelTarget?.isSeller ? "Cancel Sale" : "Cancel Order"}
+            </Text>
+            <Text style={styles.modalBody}>
+              {cancelTarget?.isSeller
+                ? "This sale will be cancelled while it is still active. Shipped or delivered sales cannot be cancelled."
+                : "This order will be cancelled while it is still active. Shipped or delivered orders cannot be cancelled."}
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setCancelTarget(null)}
+                disabled={Boolean(pendingOrderActionId)}
+              >
+                <Text style={styles.cancelText}>Keep</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.confirmDeleteBtn}
+                onPress={handleConfirmCancel}
+                disabled={Boolean(pendingOrderActionId)}
+              >
+                <Text style={styles.confirmDeleteText}>
+                  {pendingOrderActionId ? "Cancelling..." : "Confirm Cancel"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Delete Account Modal ── */}
       <Modal
