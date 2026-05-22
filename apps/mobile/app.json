@@ -22,7 +22,11 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.anshsahu01.justsell"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,6 +40,12 @@
         }
       ],
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c26da354-f61d-4cca-8c7d-bb219bdbb6e9"
+      }
+    }
   }
 }
