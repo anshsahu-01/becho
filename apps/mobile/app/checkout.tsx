@@ -16,6 +16,8 @@ import { Product } from "@/types";
 import { formatPrice } from "@/utils/format";
 import * as Clipboard from "expo-clipboard";
 import * as Linking from "expo-linking";
+import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
 const PAYMENT_OPTIONS = ["Online Payment", "Cash on Delivery"];
@@ -39,10 +41,13 @@ export default function CheckoutScreen() {
   const [orderLoading, setOrderLoading] = useState(false);
   const [mobileNumber, setMobileNumber] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [utrNumber, setUtrNumber] = useState("");
+  const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const { token } = useAuth();
   const removeItemFromCart = useCartStore((state) => state.removeItem);
+  const UPLOAD_STORAGE_KEY = "just_sell_upi_proof";
 
   useEffect(() => {
     async function loadCheckoutProduct() {
@@ -72,6 +77,7 @@ export default function CheckoutScreen() {
     const errors: Record<string, string> = {};
     const trimmedMobile = mobileNumber.trim();
     const trimmedAddress = deliveryAddress.trim();
+    const trimmedUtr = utrNumber.trim();
 
     if (!trimmedMobile) {
       errors.mobileNumber = "Mobile number is required";
@@ -87,8 +93,53 @@ export default function CheckoutScreen() {
         : "Delivery address is required";
     }
 
+    if (paymentMethod === "Online Payment") {
+      if (!trimmedUtr) {
+        errors.utrNumber = "UTR number is required";
+      }
+      if (!paymentScreenshot) {
+        errors.paymentScreenshot = "Payment screenshot is required";
+      }
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const saveUpiProofLocally = async () => {
+    try {
+      const payload = {
+        productId: checkoutData.productId,
+        utrNumber: utrNumber.trim(),
+        paymentScreenshot,
+        paymentStatus: "verification_pending",
+        createdAt: new Date().toISOString(),
+      };
+      await AsyncStorage.setItem(`${UPLOAD_STORAGE_KEY}:${checkoutData.productId}`, JSON.stringify(payload));
+    } catch (err) {
+      console.warn("Failed to save UPI proof locally", err);
+    }
+  };
+
+  const pickPaymentScreenshot = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission required", "Please allow access to your photo library to upload the payment screenshot.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsEditing: true,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setPaymentScreenshot(result.assets[0].uri);
+      if (validationErrors.paymentScreenshot) {
+        setValidationErrors((prev) => ({ ...prev, paymentScreenshot: "" }));
+      }
+    }
   };
 
   const handlePlaceOrder = async (method: "COD" | "UPI") => {
@@ -109,13 +160,25 @@ export default function CheckoutScreen() {
         trimmedAddress,
         token
       );
+
+      if (method === "UPI") {
+        await saveUpiProofLocally();
+      }
+
       await removeItemFromCart(checkoutData.productId);
-      Alert.alert("Success", "Order placed successfully!");
+      Alert.alert(
+        "Success",
+        method === "UPI"
+          ? "Order placed successfully! UPI proof is saved locally and pending verification."
+          : "Order placed successfully!"
+      );
       router.push("/(tabs)/profile");
     } catch (err) {
       Alert.alert(
         "Order failed",
-        err instanceof ApiError ? err.message : "Could not place order"
+        err instanceof ApiError
+          ? err.message
+          : "Could not place order"
       );
     } finally {
       setOrderLoading(false);
@@ -311,6 +374,48 @@ export default function CheckoutScreen() {
                 <Text className="text-[14px] text-muted">Scan to pay</Text>
                 <Text className="mt-1 text-[16px] font-semibold text-ink">9109185454-2@axl</Text>
               </View>
+              <View className="mt-4">
+                <Input
+                  label="UTR Number"
+                  placeholder="Enter transaction UTR number"
+                  value={utrNumber}
+                  onChangeText={(text) => {
+                    setUtrNumber(text);
+                    if (validationErrors.utrNumber) {
+                      setValidationErrors((prev) => ({ ...prev, utrNumber: "" }));
+                    }
+                  }}
+                  error={validationErrors.utrNumber}
+                />
+                <View className="mt-4">
+                  <Text className="mb-2 text-[14px] text-ink">Payment screenshot</Text>
+                  {paymentScreenshot ? (
+                    <View className="rounded-2xl border border-line bg-white p-2">
+                      <Image
+                        source={{ uri: paymentScreenshot }}
+                        className="h-40 w-full rounded-xl"
+                        contentFit="cover"
+                      />
+                      <Pressable
+                        onPress={pickPaymentScreenshot}
+                        className="mt-3 h-12 items-center justify-center rounded-xl border border-line bg-white"
+                      >
+                        <Text className="text-[13px] font-medium text-ink">Change screenshot</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={pickPaymentScreenshot}
+                      className="h-40 items-center justify-center rounded-2xl border border-dashed border-line bg-white"
+                    >
+                      <Text className="text-[14px] text-muted">Tap to upload screenshot</Text>
+                    </Pressable>
+                  )}
+                  {validationErrors.paymentScreenshot ? (
+                    <Text className="mt-2 text-[13px] text-danger">{validationErrors.paymentScreenshot}</Text>
+                  ) : null}
+                </View>
+              </View>
               <View className="mt-4 flex-row gap-2">
                 <Pressable
                   onPress={copyUpiId}
@@ -327,8 +432,8 @@ export default function CheckoutScreen() {
               </View>
               <Pressable
                 onPress={() => handlePlaceOrder("UPI")}
-                disabled={orderLoading}
-                className={`mt-3 h-12 items-center justify-center rounded-xl bg-ink ${orderLoading ? "opacity-70" : ""}`}
+                disabled={orderLoading || !utrNumber.trim() || !paymentScreenshot}
+                className={`mt-3 h-12 items-center justify-center rounded-xl bg-ink ${orderLoading || !utrNumber.trim() || !paymentScreenshot ? "opacity-50" : ""}`}
               >
                 <Text className="text-[15px] font-medium text-white">
                   {orderLoading ? "Processing..." : "I Have Paid"}

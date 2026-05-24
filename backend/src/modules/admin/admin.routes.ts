@@ -7,6 +7,10 @@ const router = Router();
 router.get("/stats", authenticate, adminController.getStats);
 router.get("/users", authenticate, adminController.getUsers);
 router.get("/products", authenticate, adminController.getProducts);
+router.patch("/products/:id/sold", authenticate, adminController.markProductSold);
+router.patch("/products/:id/hide", authenticate, adminController.hideProduct);
+router.patch("/products/:id/restore", authenticate, adminController.restoreProduct);
+router.delete("/products/:id", authenticate, adminController.deleteProduct);
 router.get("/orders", authenticate, adminController.getOrders);
 
 export default router;

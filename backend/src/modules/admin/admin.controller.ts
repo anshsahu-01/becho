@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import { ProductStatus } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { AppError } from "../../utils/AppError";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { assertAdminAccess } from "./admin.service";
 
@@ -56,6 +58,7 @@ export const getProducts = asyncHandler(async (req: Request, res: Response) => {
       price: true,
       status: true,
       isSold: true,
+      isHidden: true,
       createdAt: true,
       user: {
         select: {
@@ -68,6 +71,87 @@ export const getProducts = asyncHandler(async (req: Request, res: Response) => {
   });
 
   res.json({ success: true, data: products });
+});
+
+async function getProductOrFail(id: string) {
+  const product = await prisma.product.findUnique({
+    where: { id },
+    select: { id: true, status: true, isSold: true, isHidden: true },
+  });
+
+  if (!product) {
+    throw new AppError("Product not found", 404);
+  }
+
+  return product;
+}
+
+export const markProductSold = asyncHandler(async (req: Request, res: Response) => {
+  await assertAdminAccess(req);
+  const { id } = req.params;
+
+  await getProductOrFail(id);
+
+  const updated = await prisma.product.update({
+    where: { id },
+    data: {
+      status: ProductStatus.SOLD,
+      isSold: true,
+      isHidden: false,
+    },
+  });
+
+  res.json({ success: true, data: updated });
+});
+
+export const hideProduct = asyncHandler(async (req: Request, res: Response) => {
+  await assertAdminAccess(req);
+  const { id } = req.params;
+
+  await getProductOrFail(id);
+
+  const updated = await prisma.product.update({
+    where: { id },
+    data: {
+      status: ProductStatus.HIDDEN,
+      isHidden: true,
+    },
+  });
+
+  res.json({ success: true, data: updated });
+});
+
+export const restoreProduct = asyncHandler(async (req: Request, res: Response) => {
+  await assertAdminAccess(req);
+  const { id } = req.params;
+
+  const product = await getProductOrFail(id);
+
+  if (product.status !== ProductStatus.HIDDEN) {
+    throw new AppError("Only hidden listings can be restored", 400);
+  }
+
+  const updated = await prisma.product.update({
+    where: { id },
+    data: {
+      status: ProductStatus.ACTIVE,
+      isHidden: false,
+      isSold: false,
+    },
+  });
+
+  res.json({ success: true, data: updated });
+});
+
+export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
+  await assertAdminAccess(req);
+  const { id } = req.params;
+
+  await getProductOrFail(id);
+
+  await prisma.product.delete({ where: { id } });
+
+  res.json({ success: true, data: { id } });
 });
 
 export const getOrders = asyncHandler(async (req: Request, res: Response) => {

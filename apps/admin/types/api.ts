@@ -27,6 +27,7 @@ export type AdminListing = {
   price: number;
   status?: string;
   isSold?: boolean;
+  isHidden?: boolean;
   createdAt: string;
   user?: {
     id: string;

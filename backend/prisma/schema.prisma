@@ -81,6 +81,7 @@ model Product {
   condition   String
   images      String[]
   isSold      Boolean       @default(false)
+  isHidden    Boolean       @default(false)
   status      ProductStatus @default(ACTIVE)
   createdAt   DateTime      @default(now())
 

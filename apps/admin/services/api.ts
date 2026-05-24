@@ -26,13 +26,13 @@ export function useAdminApiService() {
   return useMemo(() => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
-    const request = async <T>(path: string): Promise<T> => {
+    const request = async <T>(path: string, method: string = "GET"): Promise<T> => {
       if (!baseUrl) throw new ApiError("Missing NEXT_PUBLIC_API_URL", 500);
       const url = `${baseUrl}${path}`;
       const token = await getToken();
-      console.log("ADMIN API TOKEN:", { path, tokenExists: Boolean(token) });
+      console.log("ADMIN API TOKEN:", { path, method, tokenExists: Boolean(token) });
       const res = await fetch(url, {
-        method: "GET",
+        method,
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -60,6 +60,15 @@ export function useAdminApiService() {
     const getDashboardStats = async (): Promise<DashboardStats> =>
       (await request<ApiEnvelope<DashboardStats>>("/admin/stats")).data;
 
-    return { getUsers, getListings, getOrders, getDashboardStats };
+    const markListingSold = async (id: string) =>
+      await request<ApiEnvelope<AdminListing>>(`/admin/products/${id}/sold`, "PATCH");
+    const hideListing = async (id: string) =>
+      await request<ApiEnvelope<AdminListing>>(`/admin/products/${id}/hide`, "PATCH");
+    const restoreListing = async (id: string) =>
+      await request<ApiEnvelope<AdminListing>>(`/admin/products/${id}/restore`, "PATCH");
+    const deleteListing = async (id: string) =>
+      await request<ApiEnvelope<{ id: string }>>(`/admin/products/${id}`, "DELETE");
+
+    return { getUsers, getListings, getOrders, getDashboardStats, markListingSold, hideListing, restoreListing, deleteListing };
   }, [getToken]);
 }
