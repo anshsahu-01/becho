@@ -7,9 +7,11 @@ type PageShellProps = {
 
 export function PageShell({ title, children }: PageShellProps) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 md:p-6">
-      <h2 className="mb-2 text-lg font-semibold text-slate-900">{title}</h2>
-      <p className="mb-4 text-sm text-slate-500">Placeholder content for the {title.toLowerCase()} section.</p>
+    <section className="rounded-xl border bg-white p-4 md:p-6" style={{ borderColor: "#EEEEEE" }}>
+      <h2 className="mb-1 text-xl font-semibold" style={{ color: "#111111" }}>{title}</h2>
+      <p className="mb-5 text-sm" style={{ color: "#666666" }}>
+        Manage {title.toLowerCase()} with clear operational visibility.
+      </p>
       {children}
     </section>
   );

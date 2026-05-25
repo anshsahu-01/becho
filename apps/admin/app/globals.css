@@ -4,8 +4,14 @@
 
 :root {
   color-scheme: light;
+  --primary: #111111;
+  --secondary: #666666;
+  --background: #ffffff;
+  --accent: #ff4c3b;
+  --border: #eeeeee;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  background: var(--background);
+  color: var(--primary);
 }

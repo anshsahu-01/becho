@@ -9,8 +9,8 @@ type Props = {
 };
 
 export function DataState({ loading, error, isEmpty, emptyText, children }: Props) {
-  if (loading) return <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading...</div>;
-  if (error) return <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>;
-  if (isEmpty) return <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">{emptyText}</div>;
+  if (loading) return <div className="rounded-lg border bg-white p-4 text-sm" style={{ borderColor: "#EEEEEE", color: "#666666" }}>Loading...</div>;
+  if (error) return <div className="rounded-lg border bg-white p-4 text-sm" style={{ borderColor: "#FF4C3B", color: "#FF4C3B" }}>{error}</div>;
+  if (isEmpty) return <div className="rounded-lg border bg-white p-6 text-sm" style={{ borderColor: "#EEEEEE", color: "#666666" }}>{emptyText}</div>;
   return <>{children}</>;
 }

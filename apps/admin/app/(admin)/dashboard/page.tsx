@@ -10,14 +10,20 @@ export default function DashboardPage() {
 
   return (
     <PageShell title="Dashboard">
-      {loading ? <p className="text-sm text-slate-600">Loading dashboard stats...</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {loading ? <p className="text-sm" style={{ color: "#666666" }}>Loading dashboard stats...</p> : null}
+      {error ? <p className="text-sm" style={{ color: "#FF4C3B" }}>{error}</p> : null}
       {!loading && !error && data ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {[{ label: "Total Users", value: data.totalUsers }, { label: "Total Listings", value: data.totalListings }, { label: "Total Orders", value: data.totalOrders }, { label: "Active Listings", value: data.activeListings }, { label: "Sold Listings", value: data.soldListings }].map((card) => (
-            <div key={card.label} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs text-slate-500">{card.label}</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{card.value}</p>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {[
+            { label: "Total Users", value: data.totalUsers },
+            { label: "Total Listings", value: data.totalListings },
+            { label: "Total Orders", value: data.totalOrders },
+            { label: "Active Listings", value: data.activeListings },
+            { label: "Sold Listings", value: data.soldListings },
+          ].map((card) => (
+            <div key={card.label} className="rounded-lg border bg-white p-4" style={{ borderColor: "#EEEEEE" }}>
+              <p className="text-xs" style={{ color: "#666666" }}>{card.label}</p>
+              <p className="mt-2 text-2xl font-semibold" style={{ color: "#111111" }}>{card.value}</p>
             </div>
           ))}
         </div>
