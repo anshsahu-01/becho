@@ -5,7 +5,21 @@ import { AppError } from "../../utils/AppError";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { assertAdminAccess } from "./admin.service";
 
+const getQueryString = (
+  value: string | string[] | undefined
+): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
+function requireString(value: string | string[] | undefined, label: string): string {
+  const normalized = getQueryString(value);
+  if (!normalized) {
+    throw new AppError(`${label} is required`, 400);
+  }
+  return normalized;
+}
+
 export const getStats = asyncHandler(async (req: Request, res: Response) => {
+  getQueryString(req.query.status as string | string[] | undefined);
   await assertAdminAccess(req);
 
   const [totalUsers, totalListings, totalOrders, soldListings] = await Promise.all([
@@ -88,7 +102,7 @@ async function getProductOrFail(id: string) {
 
 export const markProductSold = asyncHandler(async (req: Request, res: Response) => {
   await assertAdminAccess(req);
-  const { id } = req.params;
+  const id = requireString(req.params.id as string | string[] | undefined, "Product ID");
 
   await getProductOrFail(id);
 
@@ -106,7 +120,7 @@ export const markProductSold = asyncHandler(async (req: Request, res: Response) 
 
 export const hideProduct = asyncHandler(async (req: Request, res: Response) => {
   await assertAdminAccess(req);
-  const { id } = req.params;
+  const id = requireString(req.params.id as string | string[] | undefined, "Product ID");
 
   await getProductOrFail(id);
 
@@ -123,7 +137,7 @@ export const hideProduct = asyncHandler(async (req: Request, res: Response) => {
 
 export const restoreProduct = asyncHandler(async (req: Request, res: Response) => {
   await assertAdminAccess(req);
-  const { id } = req.params;
+  const id = requireString(req.params.id as string | string[] | undefined, "Product ID");
 
   const product = await getProductOrFail(id);
 
@@ -145,7 +159,7 @@ export const restoreProduct = asyncHandler(async (req: Request, res: Response) =
 
 export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
   await assertAdminAccess(req);
-  const { id } = req.params;
+  const id = requireString(req.params.id as string | string[] | undefined, "Product ID");
 
   await getProductOrFail(id);
 
@@ -183,9 +197,9 @@ export const getOrders = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const approveOrder = asyncHandler(async (req: Request, res: Response) => {
-  console.log("BACKEND_APPROVE_HIT", { orderId: req.params.id, action: "approve" });
+  const id = requireString(req.params.id as string | string[] | undefined, "Order ID");
+  console.log("BACKEND_APPROVE_HIT", { orderId: id, action: "approve" });
   await assertAdminAccess(req);
-  const { id } = req.params;
 
   const updated = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
@@ -223,9 +237,9 @@ export const approveOrder = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const rejectOrder = asyncHandler(async (req: Request, res: Response) => {
-  console.log("BACKEND_APPROVE_HIT", { orderId: req.params.id, action: "reject" });
+  const id = requireString(req.params.id as string | string[] | undefined, "Order ID");
+  console.log("BACKEND_APPROVE_HIT", { orderId: id, action: "reject" });
   await assertAdminAccess(req);
-  const { id } = req.params;
 
   const existing = await prisma.order.findUnique({
     where: { id },
@@ -269,7 +283,7 @@ export const rejectOrder = asyncHandler(async (req: Request, res: Response) => {
 
 export const shipOrder = asyncHandler(async (req: Request, res: Response) => {
   await assertAdminAccess(req);
-  const { id } = req.params;
+  const id = requireString(req.params.id as string | string[] | undefined, "Order ID");
   const order = await prisma.order.findUnique({ where: { id }, select: { id: true, orderStatus: true } });
   if (!order) throw new AppError("Order not found", 404);
   if (order.orderStatus !== OrderStatus.processing) {
@@ -285,7 +299,7 @@ export const shipOrder = asyncHandler(async (req: Request, res: Response) => {
 
 export const deliverOrder = asyncHandler(async (req: Request, res: Response) => {
   await assertAdminAccess(req);
-  const { id } = req.params;
+  const id = requireString(req.params.id as string | string[] | undefined, "Order ID");
   const order = await prisma.order.findUnique({ where: { id }, select: { id: true, orderStatus: true } });
   if (!order) throw new AppError("Order not found", 404);
   if (order.orderStatus !== OrderStatus.shipped) {
