@@ -162,6 +162,7 @@ export const getOrders = asyncHandler(async (req: Request, res: Response) => {
       id: true,
       amount: true,
       paymentStatus: true,
+      orderStatus: true,
       createdAt: true,
       utrNumber: true,
       paymentScreenshot: true,
@@ -182,12 +183,19 @@ export const getOrders = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const approveOrder = asyncHandler(async (req: Request, res: Response) => {
+  console.log("BACKEND_APPROVE_HIT", { orderId: req.params.id, action: "approve" });
   await assertAdminAccess(req);
   const { id } = req.params;
 
   const updated = await prisma.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({ where: { id } });
+    const order = await tx.order.findUnique({
+      where: { id },
+      select: { id: true, productId: true, paymentStatus: true, orderStatus: true },
+    });
     if (!order) throw new AppError("Order not found", 404);
+    if (order.orderStatus !== OrderStatus.pending) {
+      throw new AppError("Only pending orders can be approved", 400);
+    }
 
     const confirmed = await tx.order.update({
       where: { id },
@@ -201,6 +209,12 @@ export const approveOrder = asyncHandler(async (req: Request, res: Response) => 
       where: { productId: confirmed.productId, id: { not: id }, orderStatus: OrderStatus.pending },
       data: { paymentStatus: PaymentStatus.cancelled, orderStatus: OrderStatus.cancelled },
     });
+    console.log("ORDER_STATUS_UPDATED", {
+      orderId: confirmed.id,
+      paymentStatus: confirmed.paymentStatus,
+      orderStatus: confirmed.orderStatus,
+      action: "approve",
+    });
 
     return confirmed;
   });
@@ -209,14 +223,78 @@ export const approveOrder = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const rejectOrder = asyncHandler(async (req: Request, res: Response) => {
+  console.log("BACKEND_APPROVE_HIT", { orderId: req.params.id, action: "reject" });
   await assertAdminAccess(req);
   const { id } = req.params;
 
-  const updated = await prisma.order.update({
+  const existing = await prisma.order.findUnique({
     where: { id },
-    data: { paymentStatus: PaymentStatus.cancelled, orderStatus: OrderStatus.cancelled },
-    include: { product: true, buyer: true, seller: true },
+    select: { id: true, orderStatus: true, paymentStatus: true, productId: true },
+  });
+  if (!existing) throw new AppError("Order not found", 404);
+  if (existing.orderStatus === OrderStatus.cancelled || existing.paymentStatus === PaymentStatus.cancelled) {
+    const alreadyCancelled = await prisma.order.findUnique({
+      where: { id },
+      include: { product: true, buyer: true, seller: true },
+    });
+    res.json({ success: true, data: alreadyCancelled });
+    return;
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const cancelled = await tx.order.update({
+      where: { id },
+      data: { paymentStatus: PaymentStatus.cancelled, orderStatus: OrderStatus.cancelled },
+      include: { product: true, buyer: true, seller: true },
+    });
+
+    if (existing.orderStatus === OrderStatus.processing) {
+      await tx.product.update({
+        where: { id: existing.productId },
+        data: { status: ProductStatus.ACTIVE, isSold: false },
+      });
+    }
+
+    return cancelled;
+  });
+  console.log("ORDER_STATUS_UPDATED", {
+    orderId: updated.id,
+    paymentStatus: updated.paymentStatus,
+    orderStatus: updated.orderStatus,
+    action: "reject",
   });
 
+  res.json({ success: true, data: updated });
+});
+
+export const shipOrder = asyncHandler(async (req: Request, res: Response) => {
+  await assertAdminAccess(req);
+  const { id } = req.params;
+  const order = await prisma.order.findUnique({ where: { id }, select: { id: true, orderStatus: true } });
+  if (!order) throw new AppError("Order not found", 404);
+  if (order.orderStatus !== OrderStatus.processing) {
+    throw new AppError("Only processing orders can be marked as shipped", 400);
+  }
+  const updated = await prisma.order.update({
+    where: { id },
+    data: { orderStatus: OrderStatus.shipped },
+    include: { product: true, buyer: true, seller: true },
+  });
+  res.json({ success: true, data: updated });
+});
+
+export const deliverOrder = asyncHandler(async (req: Request, res: Response) => {
+  await assertAdminAccess(req);
+  const { id } = req.params;
+  const order = await prisma.order.findUnique({ where: { id }, select: { id: true, orderStatus: true } });
+  if (!order) throw new AppError("Order not found", 404);
+  if (order.orderStatus !== OrderStatus.shipped) {
+    throw new AppError("Only shipped orders can be marked as delivered", 400);
+  }
+  const updated = await prisma.order.update({
+    where: { id },
+    data: { orderStatus: OrderStatus.delivered },
+    include: { product: true, buyer: true, seller: true },
+  });
   res.json({ success: true, data: updated });
 });

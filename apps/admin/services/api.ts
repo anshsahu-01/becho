@@ -14,9 +14,11 @@ export type DashboardStats = {
 
 class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  details?: unknown;
+  constructor(message: string, status: number, details?: unknown) {
     super(message);
     this.status = status;
+    this.details = details;
   }
 }
 
@@ -49,7 +51,7 @@ export function useAdminApiService() {
           response: payload,
           message,
         });
-        throw new ApiError(message, res.status);
+        throw new ApiError(message, res.status, payload);
       }
       return payload as T;
     };
@@ -61,6 +63,10 @@ export function useAdminApiService() {
       await request<ApiEnvelope<AdminOrder>>(`/admin/orders/${id}/approve`, "PATCH");
     const rejectOrder = async (id: string) =>
       await request<ApiEnvelope<AdminOrder>>(`/admin/orders/${id}/reject`, "PATCH");
+    const shipOrder = async (id: string) =>
+      await request<ApiEnvelope<AdminOrder>>(`/admin/orders/${id}/ship`, "PATCH");
+    const deliverOrder = async (id: string) =>
+      await request<ApiEnvelope<AdminOrder>>(`/admin/orders/${id}/deliver`, "PATCH");
     const getDashboardStats = async (): Promise<DashboardStats> =>
       (await request<ApiEnvelope<DashboardStats>>("/admin/stats")).data;
 
@@ -73,6 +79,6 @@ export function useAdminApiService() {
     const deleteListing = async (id: string) =>
       await request<ApiEnvelope<{ id: string }>>(`/admin/products/${id}`, "DELETE");
 
-    return { getUsers, getListings, getOrders, getDashboardStats, markListingSold, hideListing, restoreListing, deleteListing, approveOrder, rejectOrder };
+    return { getUsers, getListings, getOrders, getDashboardStats, markListingSold, hideListing, restoreListing, deleteListing, approveOrder, rejectOrder, shipOrder, deliverOrder };
   }, [getToken]);
 }

@@ -23,5 +23,7 @@ router.patch(
 	authenticate,
 	adminController.rejectOrder
 );
+router.patch("/orders/:id/ship", authenticate, adminController.shipOrder);
+router.patch("/orders/:id/deliver", authenticate, adminController.deliverOrder);
 
 export default router;

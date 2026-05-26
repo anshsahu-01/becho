@@ -37,6 +37,11 @@ function formatOrder(order: OrderWithRelations) {
 }
 
 export async function createOrder(buyerId: string, input: CreateOrderBody) {
+  console.log("SERVICE_STAGE", {
+    utrNumber: input.utrNumber ?? null,
+    paymentScreenshot: input.paymentScreenshot ?? null,
+  });
+
   let persistedPaymentScreenshot: string | null = input.paymentScreenshot ?? null;
   if (persistedPaymentScreenshot?.startsWith("data:image/")) {
     const base64 = persistedPaymentScreenshot.split(",")[1];
@@ -75,20 +80,26 @@ export async function createOrder(buyerId: string, input: CreateOrderBody) {
     throw new AppError("You already have an active order for this product", 400);
   }
 
+  const createData = {
+    productId: input.productId,
+    buyerId,
+    sellerId: product.userId,
+    amount: product.price,
+    paymentMethod: input.paymentMethod,
+    paymentStatus: input.paymentStatus ?? PaymentStatus.payment_pending,
+    utrNumber: input.utrNumber ?? null,
+    paymentScreenshot: persistedPaymentScreenshot,
+    orderStatus: OrderStatus.pending,
+    mobileNumber: input.mobileNumber,
+    locationDetails: input.locationDetails,
+  } satisfies Prisma.OrderUncheckedCreateInput;
+  console.log("PRISMA_STAGE", {
+    utrNumber: createData.utrNumber ?? null,
+    paymentScreenshot: createData.paymentScreenshot ?? null,
+  });
+
   const order = await prisma.order.create({
-    data: {
-      productId: input.productId,
-      buyerId,
-      sellerId: product.userId,
-      amount: product.price,
-      paymentMethod: input.paymentMethod,
-      paymentStatus: input.paymentStatus ?? PaymentStatus.payment_pending,
-      utrNumber: input.utrNumber ?? null,
-      paymentScreenshot: persistedPaymentScreenshot,
-      orderStatus: OrderStatus.pending,
-      mobileNumber: input.mobileNumber,
-      locationDetails: input.locationDetails,
-    },
+    data: createData,
     include: orderInclude,
   });
   console.log("DB SAVED ORDER", {

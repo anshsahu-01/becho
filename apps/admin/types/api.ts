@@ -39,6 +39,7 @@ export type AdminListing = {
 export type AdminOrder = {
   id: string;
   paymentStatus: string;
+  orderStatus?: string;
   createdAt: string;
   amount?: number;
   product?: { id: string; title: string; images?: string[] };

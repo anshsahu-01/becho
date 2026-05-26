@@ -5,7 +5,10 @@ import * as orderService from "./order.service";
 import { CreateOrderBody, UpdateOrderStatusBody } from "./order.validation";
 
 export const createOrder = asyncHandler(async (req: Request, res: Response) => {
-  console.log("RECEIVED ONLINE ORDER", req.body);
+  console.log("BACKEND_BODY_STAGE", {
+    utrNumber: req.body?.utrNumber ?? null,
+    paymentScreenshot: req.body?.paymentScreenshot ?? null,
+  });
   const order = await orderService.createOrder(
     req.user!.userId,
     getValidated<CreateOrderBody>(req, "body")

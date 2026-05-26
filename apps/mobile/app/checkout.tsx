@@ -130,13 +130,17 @@ export default function CheckoutScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
+      quality: 0.7,
       allowsEditing: true,
+      base64: true,
     });
 
     if (!result.canceled && result.assets.length > 0) {
       const selected = result.assets[0];
-      setPaymentScreenshot(selected.uri);
+      const imagePayload = selected.base64
+        ? `data:image/jpeg;base64,${selected.base64}`
+        : selected.uri;
+      setPaymentScreenshot(imagePayload);
       if (validationErrors.paymentScreenshot) {
         setValidationErrors((prev) => ({ ...prev, paymentScreenshot: "" }));
       }
@@ -154,19 +158,24 @@ export default function CheckoutScreen() {
       setOrderLoading(true);
       const trimmedMobile = mobileNumber.trim();
       const trimmedAddress = deliveryAddress.trim();
+      const upiPayload = method === "UPI"
+        ? {
+            utrNumber: utrNumber.trim(),
+            paymentScreenshot: paymentScreenshot ?? undefined,
+            paymentStatus: "verification_pending" as const,
+          }
+        : undefined;
+      console.log("CHECKOUT_STAGE", {
+        utrNumber: upiPayload?.utrNumber ?? null,
+        paymentScreenshot: upiPayload?.paymentScreenshot ?? null,
+      });
       await orderService.createOrder(
         checkoutData.productId,
         method,
         trimmedMobile,
         trimmedAddress,
         token,
-        method === "UPI"
-          ? {
-              utrNumber: utrNumber.trim(),
-              paymentScreenshot: paymentScreenshot ?? undefined,
-              paymentStatus: "verification_pending",
-            }
-          : undefined
+        upiPayload
       );
 
       if (method === "UPI") {
